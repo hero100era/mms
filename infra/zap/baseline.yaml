@@ -1,0 +1,75 @@
+# ZAP Automation Framework plan for the MMS web tier (Card H-12).
+#
+# Baseline (passive) scan of the unauthenticated surface, plus an authenticated spider over
+# the pages that require a session. Run it against a deployed instance, never against
+# production:
+#
+#   docker run --rm -v "$PWD/infra/zap:/zap/wrk:ro" -t ghcr.io/zaproxy/zap-stable \
+#     zap.sh -cmd -autorun /zap/wrk/baseline.yaml
+#
+# The scan is a check, not a gate on its own: the report is reviewed by a human, and any
+# finding is either fixed or written down with a reason. Authentication requires a session
+# cookie, which the `replacer` rule below injects; produce it with a real login and export
+# it as ZAP_SESSION_COOKIE.
+env:
+  contexts:
+    - name: mms-web
+      urls:
+        - ${MMS_ZAP_TARGET}
+      includePaths:
+        - ${MMS_ZAP_TARGET}.*
+      excludePaths:
+        # Static assets are fingerprinted and served by the asset pipeline, not the app.
+        - ${MMS_ZAP_TARGET}/assets/.*
+        # Sign-out and account-destroying actions are not safe to spider.
+        - ${MMS_ZAP_TARGET}/logout.*
+        - ${MMS_ZAP_TARGET}/admin/.*/close.*
+      authentication:
+        method: manual
+      sessionManagement:
+        method: cookie
+      technology:
+        exclude:
+          - Db
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+
+  - type: replacer
+    parameters:
+      rules:
+        - description: session cookie for the authenticated crawl
+          url: ${MMS_ZAP_TARGET}.*
+          matchType: REQ_HEADER
+          matchString: Cookie
+          matchRegex: false
+          replacement: ${ZAP_SESSION_COOKIE}
+          initiators:
+            - Spider
+            - ActiveScan
+            - Proxy
+
+  - type: spider
+    parameters:
+      context: mms-web
+      maxDuration: 5
+      maxDepth: 4
+      url: ${MMS_ZAP_TARGET}
+      acceptCookies: true
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: report
+    parameters:
+      template: traditional-json-plus
+      reportDir: /zap/wrk/out
+      reportFile: mms-baseline

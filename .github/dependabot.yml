@@ -1,0 +1,31 @@
+version: 2
+updates:
+  # Maintain dependencies for npm root and workspaces
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Group non-critical dependencies to reduce PR noise
+    groups:
+      type-definitions:
+        patterns:
+          - "@types/*"
+      linters-and-tooling:
+        patterns:
+          - "eslint*"
+          - "prettier*"
+    # Critical infrastructure, runtime framework, and pinned drivers must not auto-update or float
+    ignore:
+      - dependency-name: "remix"
+      - dependency-name: "@remix-run/*"
+      - dependency-name: "typescript"
+      - dependency-name: "pg"
+      - dependency-name: "@types/pg"
+
+  # GitHub Actions workflow updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.7.0"
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run doctor
+      - name: Verify Baseline Preview & Policy Integrity
+        run: npm run db:baseline:verify
+      - run: npm run release:check
+
+  db:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.7
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mms_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mms_dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.7.0"
+          cache: npm
+      - name: Install pgschema 1.14.1
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/pgschema https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-linux-amd64
+          curl -fsSL -o /tmp/pgschema-checksums.txt https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-checksums.txt
+          expected="$(grep 'pgschema-1.14.1-linux-amd64' /tmp/pgschema-checksums.txt | awk '{print $1}')"
+          actual="$(sha256sum /tmp/pgschema | awk '{print $1}')"
+          test "$expected" = "$actual"
+          chmod +x /tmp/pgschema
+          sudo mv /tmp/pgschema /usr/local/bin/pgschema
+          pgschema --version
+      - run: npm ci
+      - run: npm run db:bootstrap
+      - run: npm run db:check
+      - run: npm run db:spike
+      - run: npm run db:test
+      - run: npm run db:verify
+      - name: Verify Baseline Preview & Policy Integrity
+        run: npm run db:baseline:verify
+      - run: npm run release:check
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.7.0"
+          cache: npm
+      - name: Dependency vulnerability scan
+        run: npm audit --audit-level=moderate
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+  provenance:
+    needs: [check, db, security]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.7.0"
+          cache: npm
+      - run: npm ci
+      - name: Verify build artifacts & provenance
+        run: |
+          npm run typecheck
+          npm run check:boundary

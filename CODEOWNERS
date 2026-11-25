@@ -1,0 +1,10 @@
+# Replace the placeholder teams with the real GitHub teams before enabling
+# branch protection. The paths below mirror the security-review rule.
+* @mms-maintainers
+
+/apps/web/app/auth/ @mms-security
+/apps/web/app/middleware/ @mms-security
+/apps/web/app/assets.ts @mms-security
+/db/ @mms-security
+/.github/ @mms-maintainers
+/docs/security/ @mms-security

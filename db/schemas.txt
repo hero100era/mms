@@ -1,0 +1,11 @@
+# Managed schemas, in apply order. Each line is one pgschema plan.
+private    # functions first: policies and triggers in later schemas call them
+core
+party
+iam
+audit_trail
+auth
+fleet
+survey
+qual
+api

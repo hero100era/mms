@@ -1,0 +1,211 @@
+
+create function private.shred_subject_key(
+  p_subject_id uuid,
+  p_reason text
+)
+returns boolean
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_status text;
+  v_actor_id uuid := private.uid();
+begin
+  if private.caller_role() not in ('audit_sealer', 'worker', 'int_sysadmin', 'mms_owner', 'migrator', 'postgres') then
+    raise exception 'shred_role_required' using errcode = '42501';
+  end if;
+  if p_reason is null or btrim(p_reason) = '' then
+    raise exception 'shred_reason_required' using errcode = '22023';
+  end if;
+
+  select key_status into v_status
+  from audit_trail.crypto_shred_key
+  where subject_id = p_subject_id
+  for update;
+
+  if not found then
+    insert into audit_trail.crypto_shred_key (
+      subject_id, key_status, algorithm, encrypted_key, key_fingerprint,
+      created_at, shredded_at, shredded_by, shred_reason
+    ) values (
+      p_subject_id, 'shredded', 'AES-256-GCM',
+      'SHREDDED_ZEROIZED_' || repeat('0', 64),
+      'SHREDDED',
+      clock_timestamp(),
+      clock_timestamp(),
+      v_actor_id,
+      p_reason
+    );
+
+    perform private.emit_event(
+      'privacy.crypto_shred.executed',
+      'success',
+      'data_subject',
+      p_subject_id,
+      null,
+      p_reason,
+      jsonb_build_object('subject_id', p_subject_id, 'reason', p_reason)
+    );
+
+    return true;
+  end if;
+
+  if v_status = 'shredded' then
+    return false;
+  end if;
+
+  update audit_trail.crypto_shred_key
+  set key_status = 'shredded',
+      encrypted_key = 'SHREDDED_ZEROIZED_' || repeat('0', 64),
+      shredded_at = clock_timestamp(),
+      shredded_by = v_actor_id,
+      shred_reason = p_reason
+  where subject_id = p_subject_id;
+
+  perform private.emit_event(
+    'privacy.crypto_shred.executed',
+    'success',
+    'data_subject',
+    p_subject_id,
+    null,
+    p_reason,
+    jsonb_build_object('subject_id', p_subject_id, 'reason', p_reason)
+  );
+
+  return true;
+end;
+$$;
+
+revoke all on function private.shred_subject_key(uuid, text) from public;
+grant execute on function private.shred_subject_key(uuid, text) to audit_sealer, worker, int_sysadmin;
+
+create function private.purge_sealed_audit_records(
+  p_retention_class text,
+  p_older_than timestamptz,
+  p_max_rows int default 1000,
+  p_reason text default 'Lifecycle retention purge of sealed audit records'
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_max_sealed_xid xid8;
+  v_purged_change_logs int := 0;
+  v_purged_events int := 0;
+  v_class_exists boolean;
+  v_purge_run_id bigint;
+  v_reason text := coalesce(nullif(btrim(p_reason), ''), 'Lifecycle retention purge of sealed audit records');
+begin
+  if private.caller_role() not in ('audit_sealer', 'worker', 'int_sysadmin', 'mms_owner', 'migrator', 'postgres') then
+    raise exception 'retention_purge_role_required' using errcode = '42501';
+  end if;
+  select exists (select 1 from audit_trail.retention_class where class_code = p_retention_class)
+  into v_class_exists;
+  if not v_class_exists then
+    raise exception 'invalid_retention_class: %', p_retention_class using errcode = '22023';
+  end if;
+
+  select max(to_xid) into v_max_sealed_xid from audit_trail.seal;
+  if v_max_sealed_xid is null then
+    raise exception 'cannot_purge_unsealed_audit: no audit seals exist' using errcode = '55000';
+  end if;
+
+  -- Enable retention purge for this transaction only
+  perform set_config('mms.retention_purge_allowed', 'true', true);
+
+  -- Purge change logs for tables matching this retention class (or unclassified change logs under RC-5)
+  with eligible_changes as (
+    select c.id
+    from audit_trail.change_log c
+    left join audit_trail.table_retention_policy p
+      on p.schema_name = c.schema_name
+     and p.table_name = c.table_name
+    where (
+      (p_retention_class = 'RC-5' and (p.retention_class = 'RC-5' or p.retention_class is null))
+      or p.retention_class = p_retention_class
+    )
+      and c.occurred_at < p_older_than
+      and c.tx_id < v_max_sealed_xid
+    order by c.id
+    limit coalesce(p_max_rows, 1000)
+    for update skip locked
+  ),
+  deleted_changes as (
+    delete from audit_trail.change_log c
+    using eligible_changes ec
+    where c.id = ec.id
+    returning c.id
+  )
+  select count(*) into v_purged_change_logs from deleted_changes;
+
+  -- Purge events matching this retention class
+  with eligible_events as (
+    select e.id
+    from audit_trail.event e
+    join audit_trail.event_type t on t.code = e.event_type
+    where t.retention_class = p_retention_class
+      and e.occurred_at < p_older_than
+      and e.tx_id < v_max_sealed_xid
+    order by e.id
+    limit coalesce(p_max_rows, 1000)
+    for update skip locked
+  ),
+  deleted_events as (
+    delete from audit_trail.event e
+    using eligible_events ee
+    where e.id = ee.id
+    returning e.id
+  )
+  select count(*) into v_purged_events from deleted_events;
+
+  -- Reset retention purge flag
+  perform set_config('mms.retention_purge_allowed', 'false', true);
+
+  -- Record retention purge run
+  insert into audit_trail.retention_purge_run (
+    retention_class, cutoff_time, max_sealed_xid,
+    change_log_purged_count, event_purged_count,
+    reason, status
+  ) values (
+    p_retention_class, p_older_than, v_max_sealed_xid,
+    v_purged_change_logs, v_purged_events,
+    v_reason,
+    'completed'
+  ) returning id into v_purge_run_id;
+
+  -- Emit regulated operational audit event (audit_trail.retention.purged)
+  perform private.emit_event(
+    'audit_trail.retention.purged',
+    'success',
+    'retention_class',
+    null,
+    null,
+    v_reason,
+    jsonb_build_object(
+      'run_id', v_purge_run_id,
+      'retention_class', p_retention_class,
+      'cutoff_time', p_older_than,
+      'max_sealed_xid', v_max_sealed_xid::text,
+      'change_logs_purged', v_purged_change_logs,
+      'events_purged', v_purged_events
+    )
+  );
+
+  return jsonb_build_object(
+    'run_id', v_purge_run_id,
+    'retention_class', p_retention_class,
+    'cutoff_time', p_older_than,
+    'max_sealed_xid', v_max_sealed_xid::text,
+    'change_logs_purged', v_purged_change_logs,
+    'events_purged', v_purged_events
+  );
+end;
+$$;
+
+revoke all on function private.purge_sealed_audit_records(text, timestamptz, int, text) from public;
+grant execute on function private.purge_sealed_audit_records(text, timestamptz, int, text) to audit_sealer, worker, int_sysadmin;

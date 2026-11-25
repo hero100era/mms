@@ -1,0 +1,74 @@
+{
+  "name": "mms",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace apps/web",
+    "hmr": "npm run hmr --workspace apps/web",
+    "start": "npm run start --workspace apps/web",
+    "start:worker": "npm run start:worker --workspace apps/web",
+    "start:sealer": "npm run start:sealer --workspace apps/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "check": "npm run typecheck && npm test && npm run check:boundary",
+    "doctor": "npm run doctor --workspace apps/web",
+    "db:bootstrap": "node db/scripts/bootstrap.ts",
+    "db:build-plan": "node db/scripts/build-plan-db.ts",
+    "db:migrate": "node db/scripts/migrate.ts",
+    "db:plan": "node db/scripts/plan.ts",
+    "db:lint": "node db/scripts/lint-schema.ts",
+    "db:check": "node db/scripts/lint-schema.ts && node db/scripts/check-migrations.ts && node db/scripts/check.ts",
+    "db:lock": "node db/scripts/lock-migrations.ts",
+    "db:baseline:freeze": "node db/scripts/freeze-baseline.ts",
+    "db:baseline:verify": "node db/scripts/verify-baseline.ts",
+    "db:spike": "node db/tests/pgschema/spike.ts",
+    "db:test": "node db/scripts/test-db.ts",
+    "db:reset": "node db/scripts/reset.ts",
+    "db:dump": "node db/scripts/dump.ts",
+    "db:verify": "node db/scripts/verify.ts",
+    "db:evidence": "node scripts/verify-migration-evidence.ts",
+    "postinstall": "node scripts/link-workspace-modules.mjs",
+    "db:fixtures": "node db/scripts/fixtures.ts",
+    "db:docs": "node db/scripts/check-org-docs.ts",
+    "audit_trail:verify": "node scripts/verify-audit_trail.ts",
+    "audit_trail:reconcile": "node scripts/reconcile-audit_trail.ts",
+    "drill:restore": "bash scripts/restore-drill.sh",
+    "release:check": "node scripts/check-release-gate.ts",
+    "release:rehearse": "node scripts/rehearse-release.ts",
+    "check:boundary": "node scripts/check-browser-boundary.mjs && node scripts/check-gateway-boundary.mjs",
+    "testenv:init": "node scripts/testenv-init.ts",
+    "testenv:keys": "node scripts/testenv-keys.ts",
+    "testenv:check": "node scripts/testenv-check.ts",
+    "testenv:reset": "node scripts/testenv-reset.ts",
+    "testenv:status": "node scripts/testenv-status.ts",
+    "testenv:start": "node scripts/testenv-start.ts",
+    "testenv:stop": "node scripts/testenv-stop.ts",
+    "db:seed:test": "node db/scripts/seed-test.ts",
+    "postgrest:start": "node scripts/testenv-start.ts",
+    "postgrest:test": "node scripts/postgrest-test.ts",
+    "postgrest:check": "node scripts/postgrest-check.ts",
+    "worker:test": "node scripts/worker-test.ts",
+    "sealer:test": "node scripts/sealer-test.ts",
+    "test:acceptance": "node --import remix/node-tsx tests/acceptance/run.ts",
+    "test:acceptance:integration": "node --import remix/node-tsx tests/e2e/run-integration.ts",
+    "test:e2e:browser": "node --import remix/node-tsx tests/e2e/run-browser.ts",
+    "test:e2e": "node --import remix/node-tsx tests/e2e/run.ts"
+  },
+  "engines": {
+    "node": "^24.7.0 || ^26.0.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.1",
+    "@types/pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  },
+  "overrides": {
+    "esbuild": "0.27.2"
+  }
+}

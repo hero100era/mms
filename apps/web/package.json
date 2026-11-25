@@ -1,0 +1,31 @@
+{
+  "name": "@mms/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "hmr": "NODE_ENV=development node hmr.ts",
+    "start": "NODE_ENV=production node --import remix/node-tsx server.ts",
+    "start:worker": "NODE_ENV=production MMS_RUNTIME_ROLE=worker node --import remix/node-tsx worker.ts",
+    "start:sealer": "NODE_ENV=production MMS_RUNTIME_ROLE=sealer node --import remix/node-tsx sealer.ts",
+    "test": "NODE_ENV=test MMS_TRUSTED_PROXY_HOPS=1 node --env-file-if-exists=../../.env ../../node_modules/.bin/remix test --concurrency 1",
+    "typecheck": "tsc --noEmit",
+    "doctor": "remix doctor"
+  },
+  "engines": {
+    "node": "^24.7.0 || ^26.0.0"
+  },
+  "dependencies": {
+    "@mms/pgrst-client": "*",
+    "@mms/test-utils": "*",
+    "@mms/totp": "*",
+    "@types/pg": "^8.23.1",
+    "pg": "^8.23.1",
+    "remix": "3.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "playwright": "1.65.0",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,4 @@
+nodejs 24.7.0
+postgres 18.7
+pgschema 1.14.1
+postgrest 16.5

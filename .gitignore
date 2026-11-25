@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+*.log
+.env
+.env.*
+!.env.example
+!.env.test.example
+db/*.sqlite
+tmp/
+.worm/
+.testdata/
+.backups/
+.DS_Store
+mms-source-review.txt
+*_review_followup.md

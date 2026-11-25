@@ -1,0 +1,114 @@
+name: Production Baseline Freeze
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: "Formal Release ID (e.g., REL-v1.0.0)"
+        required: true
+        type: string
+      tag_name:
+        description: "Release Git Tag (e.g., v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  freeze:
+    name: Freeze Production Baseline
+    runs-on: ubuntu-latest
+    environment: production-release  # Protected GitHub Environment requiring authorized reviewers
+    permissions:
+      contents: write
+    services:
+      postgres:
+        image: postgres:18.7
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mms_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mms_dev
+      MMS_RELEASE_ENVIRONMENT: production-release
+      MMS_RELEASE_ID: ${{ inputs.release_id }}
+      MMS_RELEASE_TAG: ${{ inputs.tag_name }}
+      MMS_RELEASE_APPROVERS: ${{ github.actor }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.7.0"
+          cache: npm
+
+      - name: Install pgschema 1.14.1
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/pgschema https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-linux-amd64
+          curl -fsSL -o /tmp/pgschema-checksums.txt https://github.com/pgplex/pgschema/releases/download/v1.14.1/pgschema-1.14.1-checksums.txt
+          expected="$(grep 'pgschema-1.14.1-linux-amd64' /tmp/pgschema-checksums.txt | awk '{print $1}')"
+          actual="$(sha256sum /tmp/pgschema | awk '{print $1}')"
+          test "$expected" = "$actual"
+          chmod +x /tmp/pgschema
+          sudo mv /tmp/pgschema /usr/local/bin/pgschema
+          pgschema --version
+
+      - run: npm ci
+
+      - name: Verify or Create Annotated Release Tag
+        env:
+          TAG: ${{ inputs.tag_name }}
+          RELEASE_ID: ${{ inputs.release_id }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Error: Invalid tag_name format: $TAG" >&2
+            exit 1
+          fi
+          if [[ ! "$RELEASE_ID" =~ ^[0-9A-Za-z._-]+$ ]]; then
+            echo "Error: Invalid release_id format: $RELEASE_ID" >&2
+            exit 1
+          fi
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            TAG_COMMIT="$(git rev-list -n 1 "$TAG")"
+            if [ "$TAG_COMMIT" != "$HEAD_SHA" ]; then
+              echo "Error: Tag $TAG exists but points to $TAG_COMMIT, not HEAD ($HEAD_SHA)" >&2
+              exit 1
+            fi
+            TAG_TYPE="$(git cat-file -t "$TAG")"
+            if [ "$TAG_TYPE" != "tag" ]; then
+              echo "Error: Tag $TAG is not an annotated tag object ($TAG_TYPE)" >&2
+              exit 1
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release ${RELEASE_ID}: FIRST_PRODUCTION_BASELINE freeze"
+          fi
+
+      - name: Execute One-Way Baseline Freeze
+        run: npm run db:baseline:freeze
+
+      - name: Push Annotated Release Tag
+        env:
+          TAG: ${{ inputs.tag_name }}
+        run: git push origin "refs/tags/$TAG"
+
+      - name: Archive Baseline Freeze Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-baseline-freeze-manifest
+          path: |
+            db/production-baseline.lock.json
+            db/FIRST_PRODUCTION_BASELINE.json

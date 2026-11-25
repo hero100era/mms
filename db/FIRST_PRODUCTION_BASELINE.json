@@ -1,0 +1,14 @@
+{
+  "baseline": "FIRST_PRODUCTION_BASELINE",
+  "status": "NOT_ESTABLISHED",
+  "policy": "PRE_PRODUCTION_NORMALIZATION",
+  "previewManifest": "docs/review/production-baseline-preview.lock.json",
+  "totalNormalizedMigrations": 84,
+  "firstMigration": "20261030T111331Z_f04-poc",
+  "lastMigration": "20261108T085334Z_r8-5-closure",
+  "schemas": {
+    "technicalAudit": "audit_trail",
+    "reservedMaritimeCompanyAudit": "audit"
+  },
+  "note": "MMS is in pre-production prototype development. Historical migrations 1-84 have undergone clean normalization to audit_trail and are previewed in docs/review/production-baseline-preview.lock.json. FIRST_PRODUCTION_BASELINE will be established only through an approved production release workflow (npm run db:baseline:freeze -- --release-id <id> --approvers <list>)."
+}
