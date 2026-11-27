@@ -296,3 +296,361 @@ grant select on fleet.ship_breakdown_node to
 grant select on fleet.ship_breakdown_node_particular to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
+
+-- ---------------------------------------------------------------------------
+-- Vessel register: class notations, certificates, survey schedule, findings
+-- ---------------------------------------------------------------------------
+
+create sequence fleet.certificate_no_seq
+  as bigint
+  start with 100000
+  increment by 1;
+
+revoke all on sequence fleet.certificate_no_seq from public;
+
+create table fleet.ship_class_notation (
+  id uuid not null default uuidv7(),
+  ship_id uuid not null,
+  notation_id integer not null,
+  society_code varchar(20) not null,
+  group_id integer not null,
+  status core.notation_status_enum not null default 'pending',
+  display_order integer not null default 0,
+  assigned_date date not null,
+  effective_date date,
+  expiry_date date,
+  suspended_date date,
+  withdrawn_date date,
+  reinstated_date date,
+  parameter_values jsonb,
+  resolved_notation varchar(200),
+  last_survey_date date,
+  next_survey_due date,
+  survey_cycle_months integer,
+  approved_by uuid,
+  approval_reference varchar(200),
+  remarks text,
+  is_current boolean not null default true,
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  row_version int not null default 1,
+  constraint ship_class_notation_pk primary key (id),
+  constraint ship_class_notation_ship_fk foreign key (ship_id) references fleet.ship (id) on delete cascade,
+  constraint ship_class_notation_notation_fk foreign key (notation_id) references core.class_notation (id),
+  constraint ship_class_notation_society_fk foreign key (society_code) references core.classification_society (code),
+  constraint ship_class_notation_group_fk foreign key (group_id) references core.notation_group (id),
+  constraint ship_class_notation_approved_by_fk foreign key (approved_by) references iam.app_user (id),
+  constraint ship_class_notation_cycle_ck check (survey_cycle_months is null or survey_cycle_months > 0)
+);
+create index ship_class_notation_ship_ix on fleet.ship_class_notation (ship_id);
+create index ship_class_notation_notation_ix on fleet.ship_class_notation (notation_id);
+create unique index ship_class_notation_current_uk
+  on fleet.ship_class_notation (ship_id, notation_id, society_code)
+  where (is_current is true);
+
+create table fleet.certificate (
+  id uuid not null default uuidv7(),
+  certificate_no bigint not null default nextval('fleet.certificate_no_seq'),
+  version integer not null default 1,
+  ship_id uuid,
+  company_id uuid,
+  certificate_template_code varchar(10),
+  status varchar(2) not null,
+  remark varchar(2) not null default '',
+  issued_by varchar(20) not null,
+  cert_code varchar(10) not null,
+  validity_type varchar(2) not null,
+  category varchar(3) not null,
+  internal_category varchar(3) not null,
+  description varchar(120),
+  issue_date date not null,
+  expiry_date date,
+  extended_date date,
+  mlc_declaration_date date,
+  mlc_declaration_place varchar(50),
+  doc_administration char(3),
+  cert_document_id uuid,
+  draft_document_id uuid,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  row_version int not null default 1,
+  constraint certificate_pk primary key (id),
+  constraint certificate_no_version_uk unique (certificate_no, version),
+  constraint certificate_version_ck check (version >= 1),
+  constraint certificate_target_ck check (ship_id is not null or company_id is not null),
+  constraint certificate_ship_fk foreign key (ship_id) references fleet.ship (id) on delete set null,
+  constraint certificate_company_fk foreign key (company_id) references party.organization (id) on delete set null,
+  constraint certificate_template_fk foreign key (certificate_template_code) references core.certificate_template (code) on delete set null,
+  constraint certificate_status_fk foreign key (status) references core.certificate_status (code),
+  constraint certificate_issued_by_fk foreign key (issued_by) references core.classification_society (code),
+  constraint certificate_cert_code_fk foreign key (cert_code) references core.certificate_survey_pool (code),
+  constraint certificate_validity_type_fk foreign key (validity_type) references core.certificate_validity_type (code),
+  constraint certificate_category_fk foreign key (category) references core.certificate_category (code),
+  constraint certificate_internal_category_fk foreign key (internal_category) references core.certificate_internal_category (code),
+  constraint certificate_cert_doc_fk foreign key (cert_document_id) references core.document (id) on delete set null,
+  constraint certificate_draft_doc_fk foreign key (draft_document_id) references core.document (id) on delete set null
+);
+create index certificate_ship_ix on fleet.certificate (ship_id);
+create index certificate_company_ix on fleet.certificate (company_id);
+create index certificate_cert_code_ix on fleet.certificate (cert_code);
+create unique index certificate_active_no_uk on fleet.certificate (certificate_no) where (is_active is true);
+
+create table fleet.survey_audit (
+  id uuid not null default uuidv7(),
+  ship_id uuid,
+  company_id uuid,
+  cert_code varchar(10),
+  certificate_id uuid,
+  pool_id integer,
+  description varchar(120) not null,
+  last_held_date date not null,
+  place_held varchar(50) not null,
+  next_due_date date,
+  postponement_date date,
+  survey_status core.survey_status_enum,
+  range_from_date date,
+  range_to_date date,
+  fee decimal(9, 2),
+  is_ordered boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  row_version int not null default 1,
+  constraint survey_audit_pk primary key (id),
+  constraint survey_audit_target_ck check (ship_id is not null or company_id is not null or certificate_id is not null),
+  constraint survey_audit_range_ck check (range_from_date is null or range_to_date is null or range_to_date >= range_from_date),
+  constraint survey_audit_ship_fk foreign key (ship_id) references fleet.ship (id) on delete cascade,
+  constraint survey_audit_company_fk foreign key (company_id) references party.organization (id) on delete cascade,
+  constraint survey_audit_cert_code_fk foreign key (cert_code) references core.certificate_survey_pool (code) on delete set null,
+  constraint survey_audit_certificate_fk foreign key (certificate_id) references fleet.certificate (id) on delete cascade,
+  constraint survey_audit_pool_fk foreign key (pool_id) references core.survey_pool (id) on delete set null
+);
+create index survey_audit_ship_ix on fleet.survey_audit (ship_id);
+create index survey_audit_company_ix on fleet.survey_audit (company_id);
+create index survey_audit_certificate_ix on fleet.survey_audit (certificate_id);
+create index survey_audit_pool_ix on fleet.survey_audit (pool_id);
+create index survey_audit_due_ix on fleet.survey_audit (next_due_date) where (is_active is true);
+
+create table fleet.finding_comment (
+  id uuid not null default uuidv7(),
+  ship_id uuid,
+  company_id uuid,
+  comment_type varchar(2) not null,
+  is_private boolean not null default false,
+  date_issued date not null,
+  place_issued varchar(50),
+  due_date date,
+  status varchar(1) not null,
+  postponed_due_date date,
+  mms_reference varchar(20),
+  subject varchar(500) not null,
+  body text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  created_by uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid,
+  row_version int not null default 1,
+  constraint finding_comment_pk primary key (id),
+  constraint finding_comment_target_ck check (ship_id is not null or company_id is not null),
+  constraint finding_comment_ship_fk foreign key (ship_id) references fleet.ship (id) on delete cascade,
+  constraint finding_comment_company_fk foreign key (company_id) references party.organization (id) on delete cascade,
+  constraint finding_comment_type_fk foreign key (comment_type) references core.comment_type (code),
+  constraint finding_comment_status_fk foreign key (status) references core.comment_status (code)
+);
+create index finding_comment_ship_ix on fleet.finding_comment (ship_id);
+create index finding_comment_company_ix on fleet.finding_comment (company_id);
+create index finding_comment_status_ix on fleet.finding_comment (status) where (is_active is true);
+
+create table fleet.finding_comment_certificate (
+  finding_comment_id uuid not null references fleet.finding_comment (id) on delete cascade,
+  certificate_id uuid not null references fleet.certificate (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  constraint finding_comment_certificate_pk primary key (finding_comment_id, certificate_id)
+);
+create index finding_comment_cert_cert_ix on fleet.finding_comment_certificate (certificate_id);
+
+create table fleet.finding_comment_survey_audit (
+  finding_comment_id uuid not null references fleet.finding_comment (id) on delete cascade,
+  survey_audit_id uuid not null references fleet.survey_audit (id) on delete cascade,
+  is_postponed boolean not null default false,
+  created_at timestamptz not null default now(),
+  constraint finding_comment_survey_audit_pk primary key (finding_comment_id, survey_audit_id, is_postponed)
+);
+create index finding_comment_sa_audit_ix on fleet.finding_comment_survey_audit (survey_audit_id);
+
+create trigger ship_class_notation_stamp
+  before insert or update on fleet.ship_class_notation
+  for each row execute function private.stamp();
+
+create trigger ship_class_notation_audit_capture
+  after insert or update or delete on fleet.ship_class_notation
+  for each row execute function private.audit_capture();
+
+create trigger certificate_stamp
+  before insert or update on fleet.certificate
+  for each row execute function private.stamp();
+
+create trigger certificate_audit_capture
+  after insert or update or delete on fleet.certificate
+  for each row execute function private.audit_capture();
+
+create trigger survey_audit_stamp
+  before insert or update on fleet.survey_audit
+  for each row execute function private.stamp();
+
+create trigger survey_audit_audit_capture
+  after insert or update or delete on fleet.survey_audit
+  for each row execute function private.audit_capture();
+
+create trigger finding_comment_stamp
+  before insert or update on fleet.finding_comment
+  for each row execute function private.stamp();
+
+create trigger finding_comment_audit_capture
+  after insert or update or delete on fleet.finding_comment
+  for each row execute function private.audit_capture();
+
+create trigger finding_comment_certificate_audit_capture
+  after insert or update or delete on fleet.finding_comment_certificate
+  for each row execute function private.audit_capture();
+
+create trigger finding_comment_survey_audit_audit_capture
+  after insert or update or delete on fleet.finding_comment_survey_audit
+  for each row execute function private.audit_capture();
+
+alter table fleet.ship_class_notation enable row level security;
+alter table fleet.certificate enable row level security;
+alter table fleet.survey_audit enable row level security;
+alter table fleet.finding_comment enable row level security;
+alter table fleet.finding_comment_certificate enable row level security;
+alter table fleet.finding_comment_survey_audit enable row level security;
+
+create policy ship_class_notation_staff_read on fleet.ship_class_notation
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy ship_class_notation_ext_read on fleet.ship_class_notation
+  for select to ext_user
+  using (exists (
+    select 1
+    from fleet.ship_party sp
+    where sp.ship_id = fleet.ship_class_notation.ship_id
+      and sp.org_id = any (private.my_org_ids())
+      and sp.valid @> now()
+  ));
+
+create policy certificate_staff_read on fleet.certificate
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy certificate_ext_read on fleet.certificate
+  for select to ext_user
+  using (
+    company_id = any (private.my_org_ids())
+    or exists (
+      select 1
+      from fleet.ship_party sp
+      where sp.ship_id = fleet.certificate.ship_id
+        and sp.org_id = any (private.my_org_ids())
+        and sp.valid @> now()
+    )
+  );
+
+create policy survey_audit_staff_read on fleet.survey_audit
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy survey_audit_ext_read on fleet.survey_audit
+  for select to ext_user
+  using (
+    company_id = any (private.my_org_ids())
+    or exists (
+      select 1
+      from fleet.ship_party sp
+      where sp.ship_id = fleet.survey_audit.ship_id
+        and sp.org_id = any (private.my_org_ids())
+        and sp.valid @> now()
+    )
+  );
+
+create policy finding_comment_staff_read on fleet.finding_comment
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy finding_comment_ext_read on fleet.finding_comment
+  for select to ext_user
+  using (
+    is_private is false
+    and (
+      company_id = any (private.my_org_ids())
+      or exists (
+        select 1
+        from fleet.ship_party sp
+        where sp.ship_id = fleet.finding_comment.ship_id
+          and sp.org_id = any (private.my_org_ids())
+          and sp.valid @> now()
+      )
+    )
+  );
+
+create policy finding_comment_certificate_staff_read on fleet.finding_comment_certificate
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy finding_comment_certificate_ext_read on fleet.finding_comment_certificate
+  for select to ext_user
+  using (exists (
+    select 1
+    from fleet.finding_comment fc
+    where fc.id = fleet.finding_comment_certificate.finding_comment_id
+  ));
+
+create policy finding_comment_survey_audit_staff_read on fleet.finding_comment_survey_audit
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy finding_comment_survey_audit_ext_read on fleet.finding_comment_survey_audit
+  for select to ext_user
+  using (exists (
+    select 1
+    from fleet.finding_comment fc
+    where fc.id = fleet.finding_comment_survey_audit.finding_comment_id
+  ));
+
+grant select on fleet.ship_class_notation to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on fleet.certificate to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on fleet.survey_audit to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on fleet.finding_comment to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on fleet.finding_comment_certificate to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on fleet.finding_comment_survey_audit to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;

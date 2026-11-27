@@ -77,3 +77,15 @@ revoke all on function private.org_unit_name(uuid) from public;
 grant execute on function private.org_unit_name(uuid) to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
+
+create function private.next_certificate_no()
+returns bigint
+language sql
+volatile
+security definer
+set search_path = ''
+as $$
+  select nextval('fleet.certificate_no_seq');
+$$;
+
+revoke all on function private.next_certificate_no() from public;
