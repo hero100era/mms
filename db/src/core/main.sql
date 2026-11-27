@@ -603,7 +603,7 @@ create table core.breakdown_template_node (
 create table core.breakdown_template_node_particular (
   id integer generated always as identity primary key,
   template_node_id integer not null references core.breakdown_template_node (id) on delete cascade,
-  attr_key varchar(20) not null,
+  attr_key varchar(100) not null,
   attr_title varchar(200) not null,
   data_type core.data_type_enum not null,
   default_value text,

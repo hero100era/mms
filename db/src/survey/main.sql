@@ -188,7 +188,7 @@ create table survey.certificate_line (
   extended_date date,
   mlc_declaration_date date,
   mlc_declaration_place varchar(50),
-  doc_administration char(3),
+  doc_administration varchar(3),
   version integer not null default 1,
   draft_document_id uuid,
   cert_document_id uuid,
@@ -209,10 +209,12 @@ create table survey.certificate_line (
   constraint certificate_line_int_cat_fk foreign key (internal_category) references core.certificate_internal_category (code),
   constraint certificate_line_issued_by_fk foreign key (issued_by_user_id) references iam.app_user (id),
   constraint certificate_line_draft_doc_fk foreign key (draft_document_id) references core.document (id) on delete set null,
-  constraint certificate_line_cert_doc_fk foreign key (cert_document_id) references core.document (id) on delete set null
+  constraint certificate_line_cert_doc_fk foreign key (cert_document_id) references core.document (id) on delete set null,
+  constraint certificate_line_doc_admin_fk foreign key (doc_administration) references core.flag (code)
 );
 create index certificate_line_job_ix on survey.certificate_line (job_id);
 create index certificate_line_ref_cert_ix on survey.certificate_line (ref_certificate_id);
+create index certificate_line_doc_admin_ix on survey.certificate_line (doc_administration);
 
 create table survey.survey_line (
   id uuid not null default uuidv7(),

@@ -131,7 +131,7 @@ create table fleet.ship_breakdown_node (
   code varchar(50) not null,
   name varchar(200) not null,
   description text,
-  category varchar(50),
+  category varchar(100),
   node_type varchar(50),
   level integer not null default 0,
   sort_order integer not null default 0,
@@ -160,7 +160,7 @@ create table fleet.ship_breakdown_node_particular (
   attr_title varchar(200) not null,
   attr_value text,
   selection_options jsonb,
-  data_type core.data_type_enum default 'text',
+  data_type core.data_type_enum not null default 'text',
   unit varchar(20),
   is_modified boolean not null default false,
   sort_order integer not null default 0,
@@ -370,7 +370,7 @@ create table fleet.certificate (
   extended_date date,
   mlc_declaration_date date,
   mlc_declaration_place varchar(50),
-  doc_administration char(3),
+  doc_administration varchar(3),
   cert_document_id uuid,
   draft_document_id uuid,
   is_active boolean not null default true,
@@ -393,11 +393,13 @@ create table fleet.certificate (
   constraint certificate_category_fk foreign key (category) references core.certificate_category (code),
   constraint certificate_internal_category_fk foreign key (internal_category) references core.certificate_internal_category (code),
   constraint certificate_cert_doc_fk foreign key (cert_document_id) references core.document (id) on delete set null,
-  constraint certificate_draft_doc_fk foreign key (draft_document_id) references core.document (id) on delete set null
+  constraint certificate_draft_doc_fk foreign key (draft_document_id) references core.document (id) on delete set null,
+  constraint certificate_doc_admin_fk foreign key (doc_administration) references core.flag (code)
 );
 create index certificate_ship_ix on fleet.certificate (ship_id);
 create index certificate_company_ix on fleet.certificate (company_id);
 create index certificate_cert_code_ix on fleet.certificate (cert_code);
+create index certificate_doc_admin_ix on fleet.certificate (doc_administration);
 create unique index certificate_active_no_uk on fleet.certificate (certificate_no) where (is_active is true);
 
 create table fleet.survey_audit (
