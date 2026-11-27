@@ -61,8 +61,8 @@ describe('R4.2: Action response standardization and HTTP correctness', () => {
       on conflict (id) do nothing;
     `)
     await pool.query(`
-      insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status)
-      values ('${testShipId}', '9888777', 'MV Response Tester', 'bulk_carrier', 'PA', 35000, 2020, 'in_service')
+      insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status)
+      values ('${testShipId}', '9888777', 'MV Response Tester', 'BC', 'BC', 'PA', 35000, 2020, 'in_service')
       on conflict (id) do nothing;
 
       insert into fleet.ship_party (ship_id, org_id, party_role, valid)

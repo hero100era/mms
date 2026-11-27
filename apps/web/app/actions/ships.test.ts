@@ -67,15 +67,15 @@ describe('Fleet Ships List & Particular Details (/ships, /ships/:id)', () => {
         ('${orgBId}', 'ShipTest Rival Shipping', 'company', 'active');
 
       insert into fleet.ship (
-        id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status,
+        id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status,
         call_sign, port_of_registry, deadweight, length_oa, moulded_breadth, design_draft, main_class
       ) values
         (
-          '${shipAId}', '9777001', 'MV ShipTest Alpha', 'bulk_carrier', 'PA', 42500, 2020, 'in_service',
+          '${shipAId}', '9777001', 'MV ShipTest Alpha', 'BC', 'BC', 'PA', 42500, 2020, 'in_service',
           '3EST1', 'Panama', 75000, 225.50, 32.20, 14.10, '*CSA'
         ),
         (
-          '${shipBId}', '9777002', 'MV ShipTest Bravo', 'oil_tanker', 'SG', 61000, 2021, 'laid_up',
+          '${shipBId}', '9777002', 'MV ShipTest Bravo', 'OT', 'OT', 'SG', 61000, 2021, 'laid_up',
           '9VST2', 'Singapore', 105000, 249.00, 44.00, 15.20, '*CSM'
         );
 
@@ -106,10 +106,10 @@ describe('Fleet Ships List & Particular Details (/ships, /ships/:id)', () => {
 
     // Public and private finding comments (ensure core lookup codes exist)
     await adminPool.query(`
-      insert into core.comment_type (code, name) values ('CO', 'Condition of Class') on conflict (code) do nothing;
-      insert into core.comment_status (code, name) values ('O', 'Open') on conflict (code) do nothing;
+      insert into core.finding_type (code, name) values ('CO', 'Condition of Class') on conflict (code) do nothing;
+      insert into core.finding_status (code, name) values ('O', 'Open') on conflict (code) do nothing;
       insert into fleet.finding_comment (
-        ship_id, comment_type, is_private, date_issued, place_issued, status, mms_reference, subject, body
+        ship_id, finding_type, is_private, date_issued, place_issued, status, mms_reference, subject, body
       ) values
         ('${shipAId}', 'CO', false, current_date, 'Shanghai', 'O', 'CC-2026-001', 'Public Hold Note', 'Inspect hatch coaming gasket'),
         ('${shipAId}', 'CO', true, current_date, 'Shanghai', 'O', 'INT-2026-002', 'Internal Surveyor Note', 'Confidential internal observation');

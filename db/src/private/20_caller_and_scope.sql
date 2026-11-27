@@ -524,14 +524,12 @@ begin
     if not exists (
       select 1
         from qual.staff_qualification sq
-        join qual.qualification q on q.code = sq.qualification_code
-        left join qual.qualification_action qa on qa.qualification_code = q.code
+        left join qual.qualification_action qa on qa.qualification_code = sq.qualification_code
        where sq.user_id = private.uid()
          and sq.valid @> now()
          and sq.revoked_at is null
          and (
            sq.qualification_code = p_action_code
-           or q.action_code = p_action_code
            or qa.action_code = p_action_code
          )
     ) then
@@ -724,14 +722,12 @@ begin
     if not exists (
       select 1
         from qual.staff_qualification sq
-        join qual.qualification q on q.code = sq.qualification_code
-        left join qual.qualification_action qa on qa.qualification_code = q.code
+        left join qual.qualification_action qa on qa.qualification_code = sq.qualification_code
        where sq.user_id = v_uid
          and sq.valid @> now()
          and sq.revoked_at is null
          and (
            sq.qualification_code = p_action_code
-           or q.action_code = p_action_code
            or qa.action_code = p_action_code
          )
     ) then

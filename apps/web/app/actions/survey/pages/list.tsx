@@ -207,7 +207,7 @@ export function SurveyListPage(handle: Handle<SurveyListProps>) {
                     </div>
                     <div mix={vesselDetailsStyle}>
                       IMO: <span mix={monoTextStyle}>{s.imo_number}</span> | Flag: {s.flag_code} |
-                      Type: {s.ship_type}
+                      Type: {s.type_iacs_name ?? s.type_iacs}
                     </div>
                     <div mix={vesselSubDetailsStyle}>
                       GT: {s.gross_tonnage?.toLocaleString() ?? '—'} | Built: {s.build_year ?? '—'}

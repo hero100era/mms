@@ -34,7 +34,9 @@ export interface ShipRow {
   id: string
   imo_number: string
   name: string
-  ship_type: string
+  type_iacs: string
+  type_mms: string
+  type_other?: string | null
   flag_code: string
   gross_tonnage: number | null
   build_year: number | null
@@ -49,7 +51,7 @@ export interface ShipRow {
   keel_laid_date?: string | null
   contract_date?: string | null
   class_entry_date?: string | null
-  administration_types?: string
+  administration_type?: string
   classed_by?: string | null
   port_of_registry?: string | null
   date_of_registry?: string | null
@@ -58,14 +60,9 @@ export interface ShipRow {
   official_number?: string | null
   signal_letter?: string | null
   mmsi_number?: string | null
-  type_iacs?: string
-  type_other?: string | null
-  type_mms?: string | null
   class_status?: string | null
-  ship_status?: string | null
   main_class?: string | null
   dual_class?: string | null
-  gross_tons?: number | null
   net_tons?: number | null
   national_tons?: number | null
   deadweight?: number | null
@@ -84,6 +81,7 @@ export interface ShipRow {
   responsible_mts_unit_name?: string | null
   flag_name?: string | null
   type_iacs_name?: string | null
+  type_mms_name?: string | null
   class_status_name?: string | null
   ship_status_name?: string | null
 }
@@ -132,12 +130,12 @@ export interface ShipCertificateRow {
   certificate_no: number
   version: number
   ship_id: string | null
-  company_id: string | null
+  org_id: string | null
   certificate_template_code: string | null
   status: string
   status_name: string | null
-  remark: string
-  issued_by: string
+  remarks: string | null
+  issuing_society_code: string
   cert_code: string
   validity_type: string
   category: string
@@ -155,16 +153,20 @@ export interface ShipCertificateRow {
 export interface ShipSurveyAuditRow {
   id: string
   ship_id: string | null
-  company_id: string | null
-  cert_code: string | null
+  org_id: string | null
+  certificate_type_code: string | null
   certificate_id: string | null
-  pool_id: number | null
+  survey_catalog_id: number | null
+  survey_catalog_code: string | null
+  survey_catalog_name: string | null
+  item_kind: 'survey' | 'audit' | 'doc' | null
   description: string
   last_held_date: string
   place_held: string
   next_due_date: string | null
   postponement_date: string | null
-  survey_status: string | null
+  schedule_status: string | null
+  schedule_status_name: string | null
   range_from_date: string | null
   range_to_date: string | null
   fee: number | null
@@ -177,9 +179,9 @@ export interface ShipSurveyAuditRow {
 export interface ShipFindingCommentRow {
   id: string
   ship_id: string | null
-  company_id: string | null
-  comment_type: string
-  comment_type_name: string | null
+  org_id: string | null
+  finding_type: string
+  finding_type_name: string | null
   is_private: boolean
   date_issued: string
   place_issued: string | null
@@ -455,7 +457,7 @@ export interface AuditChangeRow {
 export interface QualificationRow {
   qualification_code: string
   name: string
-  action_code: string
+  action_codes: string[]
   valid_from?: string
   valid_until?: string | null
 }

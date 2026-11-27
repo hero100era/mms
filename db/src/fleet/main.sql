@@ -14,15 +14,14 @@ create table fleet.ship (
   imo_number text not null,
   name text not null,
   previous_names varchar(500),
-  ship_type text not null default 'bulk_carrier',
-  gross_tonnage int,
+  gross_tonnage decimal(9, 2),
   build_year int,
   build_date date,
   commissioning_date date,
   keel_laid_date date,
   contract_date date,
   class_entry_date date,
-  administration_types varchar(2) not null default 'C' references core.administration_type (code),
+  administration_type varchar(2) not null default 'C' references core.administration_type (code),
   classed_by varchar(20) references core.classification_society (code),
   port_of_registry varchar(50),
   date_of_registry date,
@@ -31,10 +30,8 @@ create table fleet.ship (
   official_number varchar(10),
   type_iacs varchar(2) not null default 'BC' references core.vessel_type_iacs (code),
   type_other varchar(50),
-  type_mms varchar(2) references core.vessel_type_mms (code),
+  type_mms varchar(2) not null default 'OC' references core.vessel_type_mms (code),
   class_status varchar(2) references core.class_status (code),
-  ship_status varchar(2) references core.ship_status (code),
-  gross_tons decimal(9, 2),
   national_tons decimal(9, 2),
   deadweight integer,
   flag_code varchar(3) not null default 'PA' references core.flag (code),
@@ -54,7 +51,7 @@ create table fleet.ship (
   dual_class varchar(20) references core.classification_society (code),
   signal_letter varchar(10),
   breakdown_template_id integer references core.breakdown_template (id) on delete set null,
-  status text not null default 'in_service',
+  status varchar(20) not null default 'in_service',
   responsible_mts_unit_id uuid,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -68,7 +65,7 @@ create table fleet.ship (
   constraint ship_imo_number_ck check (imo_number ~ '^[0-9]{7}$'),
   constraint ship_gross_tonnage_ck check (gross_tonnage is null or gross_tonnage > 0),
   constraint ship_build_year_ck check (build_year is null or (build_year between 1900 and 2100)),
-  constraint ship_status_ck check (status in ('in_service', 'laid_up', 'under_construction', 'decommissioned')),
+  constraint ship_status_fk foreign key (status) references core.ship_status (code),
   constraint ship_responsible_mts_fk foreign key (responsible_mts_unit_id) references core.org_unit (id)
 );
 create index ship_responsible_mts_ix on fleet.ship (responsible_mts_unit_id);
@@ -115,7 +112,7 @@ create table fleet.ship_breakdown (
   revision integer not null default 1,
   is_active boolean not null default true,
   applied_at timestamptz,
-  applied_by varchar(100),
+  applied_by uuid references iam.app_user (id),
   created_at timestamptz not null default current_timestamp,
   updated_at timestamptz not null default current_timestamp
 );
@@ -355,11 +352,11 @@ create table fleet.certificate (
   certificate_no bigint not null default nextval('fleet.certificate_no_seq'),
   version integer not null default 1,
   ship_id uuid,
-  company_id uuid,
+  org_id uuid,
   certificate_template_code varchar(10),
   status varchar(2) not null,
-  remark varchar(2) not null default '',
-  issued_by varchar(20) not null,
+  remarks text,
+  issuing_society_code varchar(20) not null,
   cert_code varchar(10) not null,
   validity_type varchar(2) not null,
   category varchar(3) not null,
@@ -382,13 +379,13 @@ create table fleet.certificate (
   constraint certificate_pk primary key (id),
   constraint certificate_no_version_uk unique (certificate_no, version),
   constraint certificate_version_ck check (version >= 1),
-  constraint certificate_target_ck check (ship_id is not null or company_id is not null),
+  constraint certificate_target_ck check (ship_id is not null or org_id is not null),
   constraint certificate_ship_fk foreign key (ship_id) references fleet.ship (id) on delete set null,
-  constraint certificate_company_fk foreign key (company_id) references party.organization (id) on delete set null,
+  constraint certificate_org_fk foreign key (org_id) references party.organization (id) on delete set null,
   constraint certificate_template_fk foreign key (certificate_template_code) references core.certificate_template (code) on delete set null,
   constraint certificate_status_fk foreign key (status) references core.certificate_status (code),
-  constraint certificate_issued_by_fk foreign key (issued_by) references core.classification_society (code),
-  constraint certificate_cert_code_fk foreign key (cert_code) references core.certificate_survey_pool (code),
+  constraint certificate_issuing_society_fk foreign key (issuing_society_code) references core.classification_society (code),
+  constraint certificate_cert_code_fk foreign key (cert_code) references core.certificate_type (code),
   constraint certificate_validity_type_fk foreign key (validity_type) references core.certificate_validity_type (code),
   constraint certificate_category_fk foreign key (category) references core.certificate_category (code),
   constraint certificate_internal_category_fk foreign key (internal_category) references core.certificate_internal_category (code),
@@ -397,7 +394,7 @@ create table fleet.certificate (
   constraint certificate_doc_admin_fk foreign key (doc_administration) references core.flag (code)
 );
 create index certificate_ship_ix on fleet.certificate (ship_id);
-create index certificate_company_ix on fleet.certificate (company_id);
+create index certificate_org_ix on fleet.certificate (org_id);
 create index certificate_cert_code_ix on fleet.certificate (cert_code);
 create index certificate_doc_admin_ix on fleet.certificate (doc_administration);
 create unique index certificate_active_no_uk on fleet.certificate (certificate_no) where (is_active is true);
@@ -405,16 +402,16 @@ create unique index certificate_active_no_uk on fleet.certificate (certificate_n
 create table fleet.survey_audit (
   id uuid not null default uuidv7(),
   ship_id uuid,
-  company_id uuid,
-  cert_code varchar(10),
+  org_id uuid,
+  certificate_type_code varchar(10),
   certificate_id uuid,
-  pool_id integer,
+  survey_catalog_id integer,
   description varchar(120) not null,
   last_held_date date not null,
   place_held varchar(50) not null,
   next_due_date date,
   postponement_date date,
-  survey_status core.survey_status_enum,
+  schedule_status varchar(2) references core.survey_audit_status (code),
   range_from_date date,
   range_to_date date,
   fee decimal(9, 2),
@@ -426,25 +423,25 @@ create table fleet.survey_audit (
   updated_by uuid,
   row_version int not null default 1,
   constraint survey_audit_pk primary key (id),
-  constraint survey_audit_target_ck check (ship_id is not null or company_id is not null or certificate_id is not null),
+  constraint survey_audit_target_ck check (ship_id is not null or org_id is not null or certificate_id is not null),
   constraint survey_audit_range_ck check (range_from_date is null or range_to_date is null or range_to_date >= range_from_date),
   constraint survey_audit_ship_fk foreign key (ship_id) references fleet.ship (id) on delete cascade,
-  constraint survey_audit_company_fk foreign key (company_id) references party.organization (id) on delete cascade,
-  constraint survey_audit_cert_code_fk foreign key (cert_code) references core.certificate_survey_pool (code) on delete set null,
+  constraint survey_audit_org_fk foreign key (org_id) references party.organization (id) on delete cascade,
+  constraint survey_audit_certificate_type_fk foreign key (certificate_type_code) references core.certificate_type (code) on delete set null,
   constraint survey_audit_certificate_fk foreign key (certificate_id) references fleet.certificate (id) on delete cascade,
-  constraint survey_audit_pool_fk foreign key (pool_id) references core.survey_pool (id) on delete set null
+  constraint survey_audit_catalog_fk foreign key (survey_catalog_id) references core.survey_audit_catalog (id) on delete set null
 );
 create index survey_audit_ship_ix on fleet.survey_audit (ship_id);
-create index survey_audit_company_ix on fleet.survey_audit (company_id);
+create index survey_audit_org_ix on fleet.survey_audit (org_id);
 create index survey_audit_certificate_ix on fleet.survey_audit (certificate_id);
-create index survey_audit_pool_ix on fleet.survey_audit (pool_id);
+create index survey_audit_catalog_ix on fleet.survey_audit (survey_catalog_id);
 create index survey_audit_due_ix on fleet.survey_audit (next_due_date) where (is_active is true);
 
 create table fleet.finding_comment (
   id uuid not null default uuidv7(),
   ship_id uuid,
-  company_id uuid,
-  comment_type varchar(2) not null,
+  org_id uuid,
+  finding_type varchar(2) not null,
   is_private boolean not null default false,
   date_issued date not null,
   place_issued varchar(50),
@@ -461,14 +458,14 @@ create table fleet.finding_comment (
   updated_by uuid,
   row_version int not null default 1,
   constraint finding_comment_pk primary key (id),
-  constraint finding_comment_target_ck check (ship_id is not null or company_id is not null),
+  constraint finding_comment_target_ck check (ship_id is not null or org_id is not null),
   constraint finding_comment_ship_fk foreign key (ship_id) references fleet.ship (id) on delete cascade,
-  constraint finding_comment_company_fk foreign key (company_id) references party.organization (id) on delete cascade,
-  constraint finding_comment_type_fk foreign key (comment_type) references core.comment_type (code),
-  constraint finding_comment_status_fk foreign key (status) references core.comment_status (code)
+  constraint finding_comment_org_fk foreign key (org_id) references party.organization (id) on delete cascade,
+  constraint finding_comment_type_fk foreign key (finding_type) references core.finding_type (code),
+  constraint finding_comment_status_fk foreign key (status) references core.finding_status (code)
 );
 create index finding_comment_ship_ix on fleet.finding_comment (ship_id);
-create index finding_comment_company_ix on fleet.finding_comment (company_id);
+create index finding_comment_org_ix on fleet.finding_comment (org_id);
 create index finding_comment_status_ix on fleet.finding_comment (status) where (is_active is true);
 
 create table fleet.finding_comment_certificate (
@@ -484,7 +481,7 @@ create table fleet.finding_comment_survey_audit (
   survey_audit_id uuid not null references fleet.survey_audit (id) on delete cascade,
   is_postponed boolean not null default false,
   created_at timestamptz not null default now(),
-  constraint finding_comment_survey_audit_pk primary key (finding_comment_id, survey_audit_id, is_postponed)
+  constraint finding_comment_survey_audit_pk primary key (finding_comment_id, survey_audit_id)
 );
 create index finding_comment_sa_audit_ix on fleet.finding_comment_survey_audit (survey_audit_id);
 
@@ -558,7 +555,7 @@ create policy certificate_staff_read on fleet.certificate
 create policy certificate_ext_read on fleet.certificate
   for select to ext_user
   using (
-    company_id = any (private.my_org_ids())
+    org_id = any (private.my_org_ids())
     or exists (
       select 1
       from fleet.ship_party sp
@@ -576,7 +573,7 @@ create policy survey_audit_staff_read on fleet.survey_audit
 create policy survey_audit_ext_read on fleet.survey_audit
   for select to ext_user
   using (
-    company_id = any (private.my_org_ids())
+    org_id = any (private.my_org_ids())
     or exists (
       select 1
       from fleet.ship_party sp
@@ -596,7 +593,7 @@ create policy finding_comment_ext_read on fleet.finding_comment
   using (
     is_private is false
     and (
-      company_id = any (private.my_org_ids())
+      org_id = any (private.my_org_ids())
       or exists (
         select 1
         from fleet.ship_party sp

@@ -176,12 +176,17 @@ as
 select
   q.code,
   q.name,
-  q.action_code,
+  coalesce(
+    array_agg(qa.action_code order by qa.action_code) filter (where qa.action_code is not null),
+    '{}'::text[]
+  ) as action_codes,
   q.job_family,
   q.description,
   q.created_at,
   q.updated_at
-from qual.qualification q;
+from qual.qualification q
+left join qual.qualification_action qa on qa.qualification_code = q.code
+group by q.code, q.name, q.job_family, q.description, q.created_at, q.updated_at;
 
 revoke all on api.qualifications from public;
 grant select on api.qualifications to
@@ -192,7 +197,7 @@ create function api.my_qualifications()
 returns table(
   qualification_code text,
   name text,
-  action_code text,
+  action_codes text[],
   valid_from timestamptz,
   valid_until timestamptz
 )
@@ -201,12 +206,21 @@ stable
 security definer
 set search_path = ''
 as $$
-  select q.code, q.name, q.action_code, lower(sq.valid), upper(sq.valid)
+  select q.code,
+         q.name,
+         coalesce(
+           array_agg(qa.action_code order by qa.action_code) filter (where qa.action_code is not null),
+           '{}'::text[]
+         ),
+         lower(sq.valid),
+         upper(sq.valid)
     from qual.staff_qualification sq
     join qual.qualification q on q.code = sq.qualification_code
+    left join qual.qualification_action qa on qa.qualification_code = q.code
    where sq.user_id = private.uid()
      and sq.valid @> now()
      and sq.revoked_at is null
+   group by q.code, q.name, sq.valid
    order by q.code;
 $$;
 

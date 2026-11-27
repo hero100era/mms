@@ -130,9 +130,9 @@ describe('Card S-04: Survey Request & Station Triage Whole-Slice (SLICE-01)', ()
 
     // 4. Seed Ships and Affiliations
     await adminPool.query(`
-      insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status) values
-        ('${shipAId}', '9111222', 'MV Acme Horizon', 'bulk_carrier', 'PA', 38000, 2019, 'in_service'),
-        ('${shipBId}', '9333444', 'MV Bravo Neptune', 'oil_tanker', 'LR', 52000, 2022, 'in_service')
+      insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status) values
+        ('${shipAId}', '9111222', 'MV Acme Horizon', 'BC', 'BC', 'PA', 38000, 2019, 'in_service'),
+        ('${shipBId}', '9333444', 'MV Bravo Neptune', 'OT', 'OT', 'LR', 52000, 2022, 'in_service')
       on conflict (id) do nothing;
 
       insert into fleet.ship_party (ship_id, org_id, party_role, valid) values

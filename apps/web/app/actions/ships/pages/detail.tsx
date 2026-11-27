@@ -182,7 +182,7 @@ export function ShipDetailPage(handle: Handle<ShipDetailProps>) {
           <section aria-label="Key vessel figures" mix={kpiGridStyle}>
             <div mix={kpiCardStyle}>
               <p mix={kpiLabelStyle}>Gross Tonnage</p>
-              <p mix={kpiValueStyle}>{formatNumber(ship.gross_tons ?? ship.gross_tonnage)}</p>
+              <p mix={kpiValueStyle}>{formatNumber(ship.gross_tonnage)}</p>
             </div>
             <div mix={kpiCardStyle}>
               <p mix={kpiLabelStyle}>Deadweight</p>
@@ -237,8 +237,8 @@ export function ShipDetailPage(handle: Handle<ShipDetailProps>) {
               <dl mix={dlStyle}>
                 <dt mix={dtStyle}>Vessel Type</dt>
                 <dd mix={ddStyle}>
-                  {formatShipType(ship.ship_type)}
-                  {ship.type_iacs_name ? ` (${ship.type_iacs} — ${ship.type_iacs_name})` : ''}
+                  {formatText(ship.type_iacs_name ?? ship.type_iacs)} ({ship.type_iacs})
+                  {ship.type_mms_name ? ` / MMS: ${ship.type_mms_name}` : ''}
                 </dd>
                 <dt mix={dtStyle}>Main Class</dt>
                 <dd mix={ddStyle}>{formatText(ship.main_class)}</dd>
@@ -249,10 +249,10 @@ export function ShipDetailPage(handle: Handle<ShipDetailProps>) {
                 <dt mix={dtStyle}>Class / Ship Status</dt>
                 <dd mix={ddStyle}>
                   {formatText(ship.class_status_name ?? ship.class_status)} /{' '}
-                  {formatText(ship.ship_status_name ?? ship.ship_status)}
+                  {formatText(ship.ship_status_name ?? formatShipStatus(ship.status))}
                 </dd>
                 <dt mix={dtStyle}>Administration</dt>
-                <dd mix={ddStyle}>{formatText(ship.administration_types)}</dd>
+                <dd mix={ddStyle}>{formatText(ship.administration_type)}</dd>
                 <dt mix={dtStyle}>MTS Unit</dt>
                 <dd mix={ddStyle}>{formatText(ship.responsible_mts_unit_name)}</dd>
                 <dt mix={dtStyle}>Built / Build Date</dt>
@@ -274,7 +274,7 @@ export function ShipDetailPage(handle: Handle<ShipDetailProps>) {
               <h2 mix={cardHeadingStyle}>Tonnage &amp; Dimensions</h2>
               <dl mix={dlStyle}>
                 <dt mix={dtStyle}>Gross Tonnage (GT)</dt>
-                <dd mix={ddStyle}>{formatNumber(ship.gross_tons ?? ship.gross_tonnage)}</dd>
+                <dd mix={ddStyle}>{formatNumber(ship.gross_tonnage)}</dd>
                 <dt mix={dtStyle}>Net / National Tons</dt>
                 <dd mix={ddStyle}>
                   {formatNumber(ship.net_tons)} / {formatNumber(ship.national_tons)}
@@ -558,7 +558,7 @@ export function ShipDetailPage(handle: Handle<ShipDetailProps>) {
                         <td mix={tableTdStyle}>
                           {formatDate(sa.range_from_date)} &ndash; {formatDate(sa.range_to_date)}
                         </td>
-                        <td mix={tableTdStyle}>{formatText(sa.survey_status)}</td>
+                        <td mix={tableTdStyle}>{formatText(sa.schedule_status_name ?? sa.schedule_status)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -601,7 +601,7 @@ export function ShipDetailPage(handle: Handle<ShipDetailProps>) {
                         <td mix={tableTdBoldStyle}>
                           <span mix={monoTextStyle}>{formatText(f.mms_reference)}</span>
                         </td>
-                        <td mix={tableTdStyle}>{formatText(f.comment_type_name ?? f.comment_type)}</td>
+                        <td mix={tableTdStyle}>{formatText(f.finding_type_name ?? f.finding_type)}</td>
                         <td mix={tableTdStyle}>{f.subject}</td>
                         <td mix={tableTdStyle}>{formatDate(f.date_issued)}</td>
                         <td mix={tableTdStyle}>{formatDate(f.due_date)}</td>

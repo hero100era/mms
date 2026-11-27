@@ -4,7 +4,6 @@
 create table qual.qualification (
   code text not null,
   name text not null,
-  action_code text,
   job_family text,
   description text,
   created_at timestamptz not null default now(),
@@ -17,7 +16,6 @@ create table qual.qualification (
   constraint qualification_pk primary key (code),
   constraint qualification_job_family_fk foreign key (job_family) references iam.job_family (code)
 );
-create index qualification_action_ix on qual.qualification (action_code);
 create index qualification_family_ix on qual.qualification (job_family);
 
 create table qual.qualification_action (

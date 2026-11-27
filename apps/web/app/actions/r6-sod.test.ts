@@ -89,8 +89,8 @@ describe('Phase R6: Consolidated Authorization Matrix & Segregation of Duties (S
       [orgId],
     )
     await adminPool.query(
-      `insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status)
-       values ($1, '7654321', 'R6 Integrity', 'container_ship', 'LR', 50000, 2021, 'in_service')`,
+      `insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status)
+       values ($1, '7654321', 'R6 Integrity', 'GC', 'OC', 'LR', 50000, 2021, 'in_service')`,
       [shipId],
     )
     await adminPool.query(

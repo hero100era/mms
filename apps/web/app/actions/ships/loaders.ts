@@ -30,21 +30,25 @@ export interface ShipDetailData {
 export async function loadShipsList(
   client: PgrstClient,
   filters: ShipsFilterState,
-): Promise<{ ships: ShipRow[]; availableTypes: string[] }> {
+): Promise<{ ships: ShipRow[]; availableTypes: Array<{ code: string; name: string }> }> {
   let allShips = (await client.select('ships', { order: 'name.asc' })) ?? []
 
-  let typeSet = new Set<string>()
+  let typeMap = new Map<string, string>()
   for (let ship of allShips) {
-    if (ship.ship_type) typeSet.add(ship.ship_type)
+    if (ship.type_iacs) {
+      typeMap.set(ship.type_iacs, ship.type_iacs_name ?? ship.type_iacs)
+    }
   }
-  let availableTypes = Array.from(typeSet).sort()
+  let availableTypes = Array.from(typeMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([code, name]) => ({ code, name }))
 
   let query = filters.q.trim().toLowerCase()
   let ships = allShips.filter((ship) => {
     if (filters.status !== 'all' && ship.status !== filters.status) {
       return false
     }
-    if (filters.shipType !== 'all' && ship.ship_type !== filters.shipType) {
+    if (filters.typeIacs !== 'all' && ship.type_iacs !== filters.typeIacs) {
       return false
     }
     if (query.length > 0) {

@@ -78,7 +78,7 @@ create table survey.survey_request_item (
   survey_request_id uuid not null,
   survey_audit_id uuid,
   finding_comment_id uuid,
-  occ_survey_code varchar(20),
+  survey_catalog_id integer,
   created_at timestamptz not null default now(),
   created_by uuid,
   updated_at timestamptz not null default now(),
@@ -88,18 +88,22 @@ create table survey.survey_request_item (
   constraint survey_request_item_req_fk foreign key (survey_request_id) references survey.survey_request (id) on delete cascade,
   constraint survey_request_item_sa_fk foreign key (survey_audit_id) references fleet.survey_audit (id) on delete set null,
   constraint survey_request_item_fc_fk foreign key (finding_comment_id) references fleet.finding_comment (id) on delete set null,
-  constraint survey_request_item_occ_fk foreign key (occ_survey_code) references core.survey_pool (code) on delete set null,
-  constraint survey_request_item_target_ck check (num_nonnulls(survey_audit_id, finding_comment_id, occ_survey_code) = 1)
+  constraint survey_request_item_catalog_fk foreign key (survey_catalog_id) references core.survey_audit_catalog (id) on delete set null,
+  constraint survey_request_item_target_ck check (num_nonnulls(survey_audit_id, finding_comment_id, survey_catalog_id) = 1)
 );
 create index survey_request_item_req_ix on survey.survey_request_item (survey_request_id);
 create index survey_request_item_sa_ix on survey.survey_request_item (survey_audit_id);
 create index survey_request_item_fc_ix on survey.survey_request_item (finding_comment_id);
+create index survey_request_item_cat_ix on survey.survey_request_item (survey_catalog_id);
 create unique index survey_request_item_req_sa_uk
   on survey.survey_request_item (survey_request_id, survey_audit_id)
   where (survey_audit_id is not null);
 create unique index survey_request_item_req_fc_uk
   on survey.survey_request_item (survey_request_id, finding_comment_id)
   where (finding_comment_id is not null);
+create unique index survey_request_item_req_cat_uk
+  on survey.survey_request_item (survey_request_id, survey_catalog_id)
+  where (survey_catalog_id is not null);
 
 -- ---------------------------------------------------------------------------
 -- Unified job execution, checklists, certificate lines, and comment lines
@@ -131,7 +135,7 @@ create table survey.job (
   updated_by uuid,
   row_version int not null default 1,
   constraint job_pk primary key (id),
-  constraint job_type_ck check (job_type in ('survey', 'audit', 'ms')),
+  constraint job_type_ck check (job_type in ('survey', 'audit', 'doc')),
   constraint job_target_ck check (ship_id is not null or org_id is not null),
   constraint job_no_self_parent_ck check (parent_job_id is null or parent_job_id <> id),
   constraint job_sod_ck check (lead_user_id is null or reviewer_user_id is null or lead_user_id <> reviewer_user_id),
@@ -203,7 +207,7 @@ create table survey.certificate_line (
   constraint certificate_line_ref_cert_fk foreign key (ref_certificate_id) references fleet.certificate (id) on delete set null,
   constraint certificate_line_action_fk foreign key (action_code) references core.certificate_action (code),
   constraint certificate_line_template_fk foreign key (certificate_template_code) references core.certificate_template (code) on delete set null,
-  constraint certificate_line_cert_code_fk foreign key (cert_code) references core.certificate_survey_pool (code),
+  constraint certificate_line_cert_code_fk foreign key (cert_code) references core.certificate_type (code),
   constraint certificate_line_validity_fk foreign key (validity_type) references core.certificate_validity_type (code),
   constraint certificate_line_category_fk foreign key (category) references core.certificate_category (code),
   constraint certificate_line_int_cat_fk foreign key (internal_category) references core.certificate_internal_category (code),
@@ -220,11 +224,11 @@ create table survey.survey_line (
   id uuid not null default uuidv7(),
   job_id uuid not null,
   survey_audit_id uuid,
-  pool_id integer,
+  survey_catalog_id integer,
   description varchar(120),
   next_due_date date,
   postponement_date date,
-  survey_status core.survey_status_enum,
+  execution_status core.survey_execution_status_enum,
   range_from_date date,
   range_to_date date,
   initialized boolean not null default false,
@@ -238,11 +242,11 @@ create table survey.survey_line (
   constraint survey_line_range_ck check (range_from_date is null or range_to_date is null or range_to_date >= range_from_date),
   constraint survey_line_job_fk foreign key (job_id) references survey.job (id) on delete cascade,
   constraint survey_line_sa_fk foreign key (survey_audit_id) references fleet.survey_audit (id) on delete set null,
-  constraint survey_line_pool_fk foreign key (pool_id) references core.survey_pool (id) on delete set null
+  constraint survey_line_catalog_fk foreign key (survey_catalog_id) references core.survey_audit_catalog (id) on delete set null
 );
 create index survey_line_job_ix on survey.survey_line (job_id);
 create index survey_line_sa_ix on survey.survey_line (survey_audit_id);
-create index survey_line_pool_ix on survey.survey_line (pool_id);
+create index survey_line_catalog_ix on survey.survey_line (survey_catalog_id);
 
 create table survey.checklist_entry (
   id bigint generated always as identity primary key,
@@ -290,11 +294,11 @@ create table survey.checklist_entry_particular (
 create index checklist_entry_particular_entry_ix on survey.checklist_entry_particular (checklist_entry_id);
 create index checklist_entry_particular_node_ix on survey.checklist_entry_particular (ship_breakdown_node_id);
 
-create table survey.comment_line (
+create table survey.finding_line (
   id uuid not null default uuidv7(),
   job_id uuid not null,
   finding_comment_id uuid,
-  comment_type varchar(2),
+  finding_type varchar(2),
   is_private boolean not null default false,
   due_date date,
   status varchar(1),
@@ -307,14 +311,14 @@ create table survey.comment_line (
   updated_at timestamptz not null default now(),
   updated_by uuid,
   row_version int not null default 1,
-  constraint comment_line_pk primary key (id),
-  constraint comment_line_job_fk foreign key (job_id) references survey.job (id) on delete cascade,
-  constraint comment_line_fc_fk foreign key (finding_comment_id) references fleet.finding_comment (id) on delete set null,
-  constraint comment_line_type_fk foreign key (comment_type) references core.comment_type (code),
-  constraint comment_line_status_fk foreign key (status) references core.comment_status (code)
+  constraint finding_line_pk primary key (id),
+  constraint finding_line_job_fk foreign key (job_id) references survey.job (id) on delete cascade,
+  constraint finding_line_fc_fk foreign key (finding_comment_id) references fleet.finding_comment (id) on delete set null,
+  constraint finding_line_type_fk foreign key (finding_type) references core.finding_type (code),
+  constraint finding_line_status_fk foreign key (status) references core.finding_status (code)
 );
-create index comment_line_job_ix on survey.comment_line (job_id);
-create index comment_line_fc_ix on survey.comment_line (finding_comment_id);
+create index finding_line_job_ix on survey.finding_line (job_id);
+create index finding_line_fc_ix on survey.finding_line (finding_comment_id);
 
 create trigger survey_request_item_stamp
   before insert or update on survey.survey_request_item
@@ -364,12 +368,12 @@ create trigger checklist_entry_particular_audit_capture
   after insert or update or delete on survey.checklist_entry_particular
   for each row execute function private.audit_capture();
 
-create trigger comment_line_stamp
-  before insert or update on survey.comment_line
+create trigger finding_line_stamp
+  before insert or update on survey.finding_line
   for each row execute function private.stamp();
 
-create trigger comment_line_audit_capture
-  after insert or update or delete on survey.comment_line
+create trigger finding_line_audit_capture
+  after insert or update or delete on survey.finding_line
   for each row execute function private.audit_capture();
 
 alter table survey.survey_request_item enable row level security;
@@ -379,7 +383,7 @@ alter table survey.certificate_line enable row level security;
 alter table survey.survey_line enable row level security;
 alter table survey.checklist_entry enable row level security;
 alter table survey.checklist_entry_particular enable row level security;
-alter table survey.comment_line enable row level security;
+alter table survey.finding_line enable row level security;
 
 create policy survey_request_item_staff_read on survey.survey_request_item
   for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
@@ -463,22 +467,22 @@ create policy checklist_entry_particular_staff_read on survey.checklist_entry_pa
       and j.office_unit_id = any (private.my_offices())
   ));
 
-create policy comment_line_staff_read on survey.comment_line
+create policy finding_line_staff_read on survey.finding_line
   for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
                 int_compliance, int_hr, int_finance, int_sysadmin
   using (exists (
     select 1 from survey.job j
-    where j.id = survey.comment_line.job_id
+    where j.id = survey.finding_line.job_id
       and j.office_unit_id = any (private.my_offices())
   ));
 
-create policy comment_line_ext_read on survey.comment_line
+create policy finding_line_ext_read on survey.finding_line
   for select to ext_user
   using (
     is_private is false
     and exists (
       select 1 from survey.job j
-      where j.id = survey.comment_line.job_id
+      where j.id = survey.finding_line.job_id
     )
   );
 
@@ -510,6 +514,6 @@ grant select on survey.checklist_entry_particular to
   int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
 
-grant select on survey.comment_line to
+grant select on survey.finding_line to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;

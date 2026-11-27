@@ -6,7 +6,9 @@ select
   s.id,
   s.imo_number,
   s.name,
-  s.ship_type,
+  s.type_iacs,
+  s.type_mms,
+  s.type_other,
   s.flag_code,
   s.gross_tonnage,
   s.build_year,
@@ -21,7 +23,7 @@ select
   s.keel_laid_date,
   s.contract_date,
   s.class_entry_date,
-  s.administration_types,
+  s.administration_type,
   s.classed_by,
   s.port_of_registry,
   s.date_of_registry,
@@ -30,14 +32,9 @@ select
   s.official_number,
   s.signal_letter,
   s.mmsi_number,
-  s.type_iacs,
-  s.type_other,
-  s.type_mms,
   s.class_status,
-  s.ship_status,
   s.main_class,
   s.dual_class,
-  s.gross_tons,
   s.net_tons,
   s.national_tons,
   s.deadweight,
@@ -56,13 +53,15 @@ select
   private.org_unit_name(s.responsible_mts_unit_id) as responsible_mts_unit_name,
   f.fullname as flag_name,
   vt.name as type_iacs_name,
+  vtm.name as type_mms_name,
   cs.name as class_status_name,
   ss.name as ship_status_name
 from fleet.ship s
 left join core.flag f on f.code = s.flag_code
 left join core.vessel_type_iacs vt on vt.code = s.type_iacs
+left join core.vessel_type_mms vtm on vtm.code = s.type_mms
 left join core.class_status cs on cs.code = s.class_status
-left join core.ship_status ss on ss.code = s.ship_status;
+left join core.ship_status ss on ss.code = s.status;
 
 create view api.ship_parties
 with (security_invoker = true)
@@ -120,12 +119,12 @@ select
   c.certificate_no,
   c.version,
   c.ship_id,
-  c.company_id,
+  c.org_id,
   c.certificate_template_code,
   c.status,
   cs.name as status_name,
-  c.remark,
-  c.issued_by,
+  c.remarks,
+  c.issuing_society_code,
   c.cert_code,
   c.validity_type,
   c.category,
@@ -147,16 +146,20 @@ as
 select
   sa.id,
   sa.ship_id,
-  sa.company_id,
-  sa.cert_code,
+  sa.org_id,
+  sa.certificate_type_code,
   sa.certificate_id,
-  sa.pool_id,
+  sa.survey_catalog_id,
+  sac.code as survey_catalog_code,
+  sac.name as survey_catalog_name,
+  sac.item_kind,
   sa.description,
   sa.last_held_date,
   sa.place_held,
   sa.next_due_date,
   sa.postponement_date,
-  sa.survey_status,
+  sa.schedule_status,
+  sas.name as schedule_status_name,
   sa.range_from_date,
   sa.range_to_date,
   sa.fee,
@@ -164,7 +167,9 @@ select
   sa.is_active,
   sa.created_at,
   sa.updated_at
-from fleet.survey_audit sa;
+from fleet.survey_audit sa
+left join core.survey_audit_catalog sac on sac.id = sa.survey_catalog_id
+left join core.survey_audit_status sas on sas.code = sa.schedule_status;
 
 create view api.ship_finding_comments
 with (security_invoker = true)
@@ -172,15 +177,15 @@ as
 select
   fc.id,
   fc.ship_id,
-  fc.company_id,
-  fc.comment_type,
-  ct.name as comment_type_name,
+  fc.org_id,
+  fc.finding_type,
+  ft.name as finding_type_name,
   fc.is_private,
   fc.date_issued,
   fc.place_issued,
   fc.due_date,
   fc.status,
-  cs.name as status_name,
+  fs.name as status_name,
   fc.postponed_due_date,
   fc.mms_reference,
   fc.subject,
@@ -189,8 +194,8 @@ select
   fc.created_at,
   fc.updated_at
 from fleet.finding_comment fc
-left join core.comment_type ct on ct.code = fc.comment_type
-left join core.comment_status cs on cs.code = fc.status;
+left join core.finding_type ft on ft.code = fc.finding_type
+left join core.finding_status fs on fs.code = fc.status;
 
 create view api.ship_breakdowns
 with (security_invoker = true)

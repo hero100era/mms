@@ -21,9 +21,9 @@ insert into iam.org_membership (user_id, user_kind, org_id, member_role, granted
   ('f1000000-0000-0000-0000-000000000011', 'external', 'f1000000-0000-0000-0000-000000000001', 'viewer', 'f1000000-0000-0000-0000-000000000011'),
   ('f1000000-0000-0000-0000-000000000012', 'external', 'f1000000-0000-0000-0000-000000000002', 'viewer', 'f1000000-0000-0000-0000-000000000012');
 
-insert into fleet.ship (id, imo_number, name, ship_type, flag_code, status) values
-  ('f1000000-0000-0000-0000-000000000101', '9800001', 'MV Alpha', 'bulk_carrier', 'PA', 'in_service'),
-  ('f1000000-0000-0000-0000-000000000102', '9800002', 'MV Beta', 'bulk_carrier', 'PA', 'in_service');
+insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, status) values
+  ('f1000000-0000-0000-0000-000000000101', '9800001', 'MV Alpha', 'BC', 'BC', 'PA', 'in_service'),
+  ('f1000000-0000-0000-0000-000000000102', '9800002', 'MV Beta', 'BC', 'BC', 'PA', 'in_service');
 
 insert into fleet.ship_party (ship_id, org_id, party_role, valid) values
   ('f1000000-0000-0000-0000-000000000101', 'f1000000-0000-0000-0000-000000000001', 'registered_owner', tstzrange(now() - interval '1 day', null)),

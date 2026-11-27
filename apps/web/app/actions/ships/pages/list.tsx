@@ -35,7 +35,7 @@ import {
   tableTrStyle,
 } from '../../theme.ts'
 import { routes } from '../../../routes.ts'
-import { formatNumber, formatShipStatus, formatShipType, SHIP_STATUS_LABELS } from '../presenters.ts'
+import { formatNumber, formatShipStatus, formatText, SHIP_STATUS_LABELS } from '../presenters.ts'
 import type { ShipsListProps } from '../types.ts'
 
 const filterFormStyle = css({
@@ -87,7 +87,7 @@ export function ShipsListPage(handle: Handle<ShipsListProps>) {
     let { role, ships, filters, availableTypes, error } = handle.props
     let isInternal = role.startsWith('int_')
     let inServiceCount = ships.filter((s) => s.status === 'in_service').length
-    let distinctTypeCount = new Set(ships.map((s) => s.ship_type).filter(Boolean)).size
+    let distinctTypeCount = new Set(ships.map((s) => s.type_iacs).filter(Boolean)).size
 
     return (
       <Document title="Fleet Vessels | MMS">
@@ -182,13 +182,13 @@ export function ShipsListPage(handle: Handle<ShipsListProps>) {
                 <label htmlFor="ship-filter-type" mix={labelStyle}>
                   Vessel Type
                 </label>
-                <select id="ship-filter-type" name="ship_type" mix={inputStyle}>
-                  <option value="all" selected={filters.shipType === 'all'}>
+                <select id="ship-filter-type" name="type_iacs" mix={inputStyle}>
+                  <option value="all" selected={filters.typeIacs === 'all'}>
                     All types
                   </option>
                   {availableTypes.map((t) => (
-                    <option key={t} value={t} selected={filters.shipType === t}>
-                      {formatShipType(t)}
+                    <option key={t.code} value={t.code} selected={filters.typeIacs === t.code}>
+                      {t.name} ({t.code})
                     </option>
                   ))}
                 </select>
@@ -263,10 +263,10 @@ export function ShipsListPage(handle: Handle<ShipsListProps>) {
                             {s.flag_name ? <span mix={subMetaStyle}>{s.flag_name}</span> : null}
                           </td>
                           <td mix={tableTdStyle}>
-                            {formatShipType(s.ship_type)}
-                            {s.type_iacs_name ? <span mix={subMetaStyle}>{s.type_iacs_name}</span> : null}
+                            {formatText(s.type_iacs_name ?? s.type_iacs)}
+                            {s.type_mms_name ? <span mix={subMetaStyle}>{s.type_mms_name}</span> : null}
                           </td>
-                          <td mix={tableTdStyle}>{formatNumber(s.gross_tons ?? s.gross_tonnage)}</td>
+                          <td mix={tableTdStyle}>{formatNumber(s.gross_tonnage)}</td>
                           <td mix={tableTdStyle}>{s.build_year ?? '—'}</td>
                           <td mix={tableTdStyle}>
                             <span mix={badgeToneStyles[badgeInfo.tone]}>

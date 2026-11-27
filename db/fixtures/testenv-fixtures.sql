@@ -85,18 +85,19 @@ on conflict (id) do update set
   status = excluded.status;
 
 -- 4. Synthetic Vessels
-insert into fleet.ship (id, imo_number, name, ship_type, flag_code, status, responsible_mts_unit_id)
-select v.id, v.imo_number, v.name, v.ship_type, v.flag_code, 'in_service', m.id
+insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, status, responsible_mts_unit_id)
+select v.id, v.imo_number, v.name, v.type_iacs, v.type_mms, v.flag_code, 'in_service', m.id
 from (values
-  ('00000000-0000-4000-8000-000000000a01'::uuid, '9990001', 'MV TEST ALPHA', 'bulk_carrier', 'PA'),
-  ('00000000-0000-4000-8000-000000000a02'::uuid, '9990002', 'MV TEST BRAVO', 'bulk_carrier', 'LR'),
-  ('00000000-0000-4000-8000-000000000b01'::uuid, '9990003', 'MV TEST CHARLIE', 'bulk_carrier', 'SG')
-) as v(id, imo_number, name, ship_type, flag_code)
+  ('00000000-0000-4000-8000-000000000a01'::uuid, '9990001', 'MV TEST ALPHA', 'BC', 'BC', 'PA'),
+  ('00000000-0000-4000-8000-000000000a02'::uuid, '9990002', 'MV TEST BRAVO', 'BC', 'BC', 'LR'),
+  ('00000000-0000-4000-8000-000000000b01'::uuid, '9990003', 'MV TEST CHARLIE', 'BC', 'BC', 'SG')
+) as v(id, imo_number, name, type_iacs, type_mms, flag_code)
 cross join (select id from core.org_unit where code = 'MTS-ASIA') m
 on conflict (id) do update set
   imo_number = excluded.imo_number,
   name = excluded.name,
-  ship_type = excluded.ship_type,
+  type_iacs = excluded.type_iacs,
+  type_mms = excluded.type_mms,
   flag_code = excluded.flag_code;
 
 -- Link Ships to Organizations
@@ -287,13 +288,12 @@ begin
 end $$;
 
 -- 8. Qualifications
-insert into qual.qualification (code, name, action_code, job_family, description)
+insert into qual.qualification (code, name, job_family, description)
 values
-  ('TEST_GENERAL_SURVEY', 'Test General Survey Qualification', 'survey.report.release', 'survey', 'Qualification for standard hull/machinery survey release'),
-  ('TEST_SPECIAL_SURVEY', 'Test Special Survey Qualification', 'survey.report.release', 'survey', 'Qualification for advanced statutory/special survey release')
+  ('TEST_GENERAL_SURVEY', 'Test General Survey Qualification', 'survey', 'Qualification for standard hull/machinery survey release'),
+  ('TEST_SPECIAL_SURVEY', 'Test Special Survey Qualification', 'survey', 'Qualification for advanced statutory/special survey release')
 on conflict (code) do update set
   name = excluded.name,
-  action_code = excluded.action_code,
   job_family = excluded.job_family;
 
 insert into qual.qualification_action (qualification_code, action_code) values

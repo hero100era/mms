@@ -365,7 +365,7 @@ create type core.task_status_enum as enum (
   'rejected'
 );
 
-create type core.survey_status_enum as enum (
+create type core.survey_execution_status_enum as enum (
   'partial',
   'scheduled',
   'executing',
@@ -412,7 +412,7 @@ create table core.class_status (
 );
 
 create table core.ship_status (
-  code varchar(2) primary key,
+  code varchar(20) primary key,
   name varchar(100) not null
 );
 
@@ -447,12 +447,12 @@ create table core.survey_audit_status (
   name varchar(100) not null
 );
 
-create table core.comment_type (
+create table core.finding_type (
   code varchar(2) primary key,
   name varchar(100) not null
 );
 
-create table core.comment_status (
+create table core.finding_status (
   code varchar(1) primary key,
   name varchar(30) not null
 );
@@ -472,7 +472,7 @@ create table core.vessel_type_mms (
   name varchar(100) not null
 );
 
-create table core.certificate_survey_pool (
+create table core.certificate_type (
   code varchar(10) primary key,
   description varchar(100) not null
 );
@@ -487,6 +487,13 @@ create table core.flag (
   code varchar(3) primary key,
   name varchar(20) not null,
   fullname varchar(100) not null,
+  is_hssc boolean default true,
+  is_active boolean default true
+);
+
+create table core.flag_ro_agreement (
+  id integer generated always as identity primary key,
+  flag_code varchar(3) not null references core.flag (code) on delete cascade,
   email varchar(50),
   tel varchar(30),
   fax varchar(30),
@@ -494,15 +501,16 @@ create table core.flag (
   contract_file varchar(128),
   contract_start date,
   contract_end date,
-  is_hssc boolean default true,
-  is_active boolean default true
+  is_active boolean not null default true,
+  created_at timestamptz not null default current_timestamp,
+  updated_at timestamptz not null default current_timestamp
 );
 
 create table core.certificate_template (
   code varchar(10) primary key,
   name varchar(100) not null,
   version varchar(20) not null,
-  cert_code varchar(10) references core.certificate_survey_pool (code),
+  cert_code varchar(10) references core.certificate_type (code),
   validity_type varchar(2) references core.certificate_validity_type (code),
   category varchar(3) references core.certificate_category (code),
   internal_category varchar(3) references core.certificate_internal_category (code),
@@ -516,31 +524,30 @@ create table core.certificate_template (
   is_active boolean default true
 );
 
-create table core.survey_pool (
+create table core.survey_audit_catalog (
   id integer generated always as identity primary key,
   code varchar(20) not null unique,
   name varchar(120) not null,
   description text,
+  item_kind text not null default 'survey' check (item_kind in ('survey', 'audit', 'doc')),
+  certificate_type_code varchar(10) references core.certificate_type (code) on delete set null,
+  survey_audit_type_code varchar(2) references core.survey_audit_type (code),
   fee decimal(9, 2),
-  cert_code varchar(10) references core.certificate_survey_pool (code) on delete set null,
-  type varchar(2) references core.survey_audit_type (code),
   period interval,
   window_before interval,
   window_after interval,
-  is_statutory boolean default false,
-  is_audit boolean default false,
-  is_doc boolean default false,
-  is_mandatory boolean default false,
-  is_periodical boolean default true,
+  is_statutory boolean not null default false,
+  is_mandatory boolean not null default false,
+  is_periodical boolean not null default true,
   created_at timestamptz default current_timestamp,
   updated_at timestamptz default current_timestamp,
-  is_active boolean default true,
-  constraint unique_mandatory_survey_audit unique (cert_code, type)
+  is_active boolean not null default true,
+  constraint survey_audit_catalog_cert_type_kind_uk unique (certificate_type_code, survey_audit_type_code)
 );
 
 create table core.report_template (
   code varchar(10) primary key,
-  survey_id integer not null references core.survey_pool (id) on delete cascade,
+  survey_catalog_id integer not null references core.survey_audit_catalog (id) on delete cascade,
   name varchar(100) not null,
   version varchar(20) not null,
   file_path_rml varchar(255),
@@ -566,8 +573,8 @@ create table core.breakdown_template (
   version varchar(20) not null default '1.0',
   is_active boolean not null default true,
   parent_template_id integer references core.breakdown_template (id) on delete set null,
-  created_by varchar(100),
-  updated_by varchar(100),
+  created_by uuid,
+  updated_by uuid,
   created_at timestamptz not null default current_timestamp,
   updated_at timestamptz not null default current_timestamp,
   constraint uq_template_code_version unique (code, version)
@@ -618,7 +625,7 @@ create table core.breakdown_template_node_particular (
 
 create table core.checklist_section (
   id integer generated always as identity primary key,
-  survey_id integer references core.survey_pool (id),
+  survey_catalog_id integer references core.survey_audit_catalog (id),
   code varchar(50) not null,
   section_number varchar(20) not null,
   title text not null,
@@ -663,7 +670,7 @@ create table core.checklist_item_particular (
 create table core.flag_cert_authorization (
   id integer generated always as identity primary key,
   flag_code varchar(3) not null references core.flag (code) on delete cascade,
-  cert_code varchar(10) not null references core.certificate_survey_pool (code) on delete cascade,
+  cert_code varchar(10) not null references core.certificate_type (code) on delete cascade,
   validity_type varchar(2) references core.certificate_validity_type (code),
   category varchar(3) references core.certificate_category (code),
   internal_category varchar(3) references core.certificate_internal_category (code),
@@ -675,16 +682,16 @@ create table core.flag_cert_authorization (
 create table core.flag_survey_authorization (
   id integer generated always as identity primary key,
   flag_code varchar(3) not null references core.flag (code) on delete cascade,
-  cert_code varchar(10) not null references core.certificate_survey_pool (code) on delete cascade,
-  survey_type varchar(2) references core.survey_audit_type (code),
+  survey_catalog_id integer not null references core.survey_audit_catalog (id) on delete cascade,
   created_at timestamptz default current_timestamp,
   updated_at timestamptz default current_timestamp,
-  is_active boolean default true
+  is_active boolean default true,
+  constraint flag_survey_authorization_flag_catalog_uk unique (flag_code, survey_catalog_id)
 );
 
 create table core.survey_preparation_section (
   id integer generated always as identity primary key,
-  survey_id integer not null references core.survey_pool (id) on delete cascade,
+  survey_catalog_id integer not null references core.survey_audit_catalog (id) on delete cascade,
   code varchar(100),
   category varchar(20),
   content varchar(1000),
@@ -697,7 +704,7 @@ create table core.survey_preparation_section (
 
 create table core.survey_preparation (
   id integer generated always as identity primary key,
-  survey_id integer not null references core.survey_pool (id) on delete cascade,
+  section_id integer not null references core.survey_preparation_section (id) on delete cascade,
   code varchar(100),
   category varchar(2),
   description text,
@@ -710,7 +717,7 @@ create table core.survey_preparation (
 
 create table core.survey_documentation (
   id integer generated always as identity primary key,
-  survey_id integer not null references core.survey_pool (id) on delete cascade,
+  survey_catalog_id integer not null references core.survey_audit_catalog (id) on delete cascade,
   code varchar(100),
   description text,
   guidance text,
@@ -765,7 +772,6 @@ create table core.class_notation (
   allowed_parameters jsonb,
   applicable_ship_types text[],
   applicable_rules varchar(500),
-  incompatible_notations int[],
   effective_from date,
   superseded_date date,
   superseded_by integer references core.class_notation (id),
@@ -795,14 +801,14 @@ create index certificate_template_cert_code_ix on core.certificate_template (cer
 create index certificate_template_validity_type_ix on core.certificate_template (validity_type);
 create index certificate_template_category_ix on core.certificate_template (category);
 create index certificate_template_internal_cat_ix on core.certificate_template (internal_category);
-create index survey_pool_cert_code_ix on core.survey_pool (cert_code);
-create index survey_pool_type_ix on core.survey_pool (type);
-create index report_template_survey_id_ix on core.report_template (survey_id);
+create index survey_audit_catalog_cert_type_ix on core.survey_audit_catalog (certificate_type_code);
+create index survey_audit_catalog_type_ix on core.survey_audit_catalog (survey_audit_type_code);
+create index report_template_catalog_id_ix on core.report_template (survey_catalog_id);
 create index breakdown_template_parent_ix on core.breakdown_template (parent_template_id);
 create index breakdown_template_node_template_ix on core.breakdown_template_node (template_id);
 create index breakdown_template_node_parent_ix on core.breakdown_template_node (template_id, parent_node_id);
 create index breakdown_template_node_part_node_ix on core.breakdown_template_node_particular (template_node_id);
-create index checklist_section_survey_id_ix on core.checklist_section (survey_id);
+create index checklist_section_catalog_id_ix on core.checklist_section (survey_catalog_id);
 create index checklist_item_section_id_ix on core.checklist_item (section_id);
 create index checklist_item_tnode_id_ix on core.checklist_item (breakdown_template_node_id);
 create index checklist_item_ref_item_id_ix on core.checklist_item (referenced_item_id);
@@ -810,10 +816,11 @@ create index checklist_item_part_item_id_ix on core.checklist_item_particular (c
 create index flag_cert_auth_flag_code_ix on core.flag_cert_authorization (flag_code);
 create index flag_cert_auth_cert_code_ix on core.flag_cert_authorization (cert_code);
 create index flag_survey_auth_flag_code_ix on core.flag_survey_authorization (flag_code);
-create index flag_survey_auth_cert_code_ix on core.flag_survey_authorization (cert_code);
-create index survey_prep_section_survey_id_ix on core.survey_preparation_section (survey_id);
-create index survey_prep_survey_id_ix on core.survey_preparation (survey_id);
-create index survey_doc_survey_id_ix on core.survey_documentation (survey_id);
+create index flag_survey_auth_catalog_id_ix on core.flag_survey_authorization (survey_catalog_id);
+create index flag_ro_agreement_flag_code_ix on core.flag_ro_agreement (flag_code);
+create index survey_prep_section_catalog_id_ix on core.survey_preparation_section (survey_catalog_id);
+create index survey_prep_section_id_ix on core.survey_preparation (section_id);
+create index survey_doc_catalog_id_ix on core.survey_documentation (survey_catalog_id);
 create index society_group_rendering_society_ix on core.society_group_rendering (society_code);
 create index society_group_rendering_group_ix on core.society_group_rendering (group_id);
 create index class_notation_society_ix on core.class_notation (society_code);
@@ -826,14 +833,17 @@ create index notation_compat_related_ix on core.notation_compatibility (related_
 create trigger flag_audit_capture
   after insert or update or delete on core.flag
   for each row execute function private.audit_capture();
+create trigger flag_ro_agreement_audit_capture
+  after insert or update or delete on core.flag_ro_agreement
+  for each row execute function private.audit_capture();
 create trigger flag_cert_authorization_audit_capture
   after insert or update or delete on core.flag_cert_authorization
   for each row execute function private.audit_capture();
 create trigger flag_survey_authorization_audit_capture
   after insert or update or delete on core.flag_survey_authorization
   for each row execute function private.audit_capture();
-create trigger survey_pool_audit_capture
-  after insert or update or delete on core.survey_pool
+create trigger survey_audit_catalog_audit_capture
+  after insert or update or delete on core.survey_audit_catalog
   for each row execute function private.audit_capture();
 create trigger class_notation_audit_capture
   after insert or update or delete on core.class_notation
@@ -855,16 +865,17 @@ alter table core.certificate_category enable row level security;
 alter table core.certificate_internal_category enable row level security;
 alter table core.certificate_action enable row level security;
 alter table core.survey_audit_status enable row level security;
-alter table core.comment_type enable row level security;
-alter table core.comment_status enable row level security;
+alter table core.finding_type enable row level security;
+alter table core.finding_status enable row level security;
 alter table core.classification_society enable row level security;
 alter table core.vessel_type_iacs enable row level security;
 alter table core.vessel_type_mms enable row level security;
-alter table core.certificate_survey_pool enable row level security;
+alter table core.certificate_type enable row level security;
 alter table core.survey_audit_type enable row level security;
 alter table core.flag enable row level security;
+alter table core.flag_ro_agreement enable row level security;
 alter table core.certificate_template enable row level security;
-alter table core.survey_pool enable row level security;
+alter table core.survey_audit_catalog enable row level security;
 alter table core.report_template enable row level security;
 alter table core.checklist_result enable row level security;
 alter table core.breakdown_template enable row level security;
@@ -919,11 +930,11 @@ create policy survey_audit_status_read on core.survey_audit_status
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
-create policy comment_type_read on core.comment_type
+create policy finding_type_read on core.finding_type
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
-create policy comment_status_read on core.comment_status
+create policy finding_status_read on core.finding_status
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
@@ -939,7 +950,7 @@ create policy vessel_type_mms_read on core.vessel_type_mms
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
-create policy certificate_survey_pool_read on core.certificate_survey_pool
+create policy certificate_type_read on core.certificate_type
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
@@ -951,11 +962,15 @@ create policy flag_read on core.flag
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
+create policy flag_ro_agreement_read on core.flag_ro_agreement
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator,
+                int_manager, int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
 create policy certificate_template_read on core.certificate_template
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
-create policy survey_pool_read on core.survey_pool
+create policy survey_audit_catalog_read on core.survey_audit_catalog
   for select to ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator,
                 int_manager, int_compliance, int_hr, int_finance, int_sysadmin
   using (true);
@@ -1038,15 +1053,16 @@ grant select on
   core.certificate_internal_category,
   core.certificate_action,
   core.survey_audit_status,
-  core.comment_type,
-  core.comment_status,
+  core.finding_type,
+  core.finding_status,
   core.classification_society,
   core.vessel_type_iacs,
   core.vessel_type_mms,
-  core.certificate_survey_pool,
+  core.certificate_type,
   core.survey_audit_type,
+  core.flag,
   core.certificate_template,
-  core.survey_pool,
+  core.survey_audit_catalog,
   core.report_template,
   core.checklist_result,
   core.breakdown_template,
@@ -1068,8 +1084,6 @@ to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
 
--- H-12: Restrict ext_user on core.flag to public non-contact columns only
-grant select on core.flag to
+grant select on core.flag_ro_agreement to
   int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
-grant select (code, name, fullname, is_hssc, is_active) on core.flag to ext_user;

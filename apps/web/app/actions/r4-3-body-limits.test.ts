@@ -65,8 +65,8 @@ describe('R4.3: Request-body and upload limits with streaming quarantine', () =>
       on conflict (id) do nothing;
     `)
     await pool.query(`
-      insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status)
-      values ('${testShipId}', '9777666', 'MV Limits Tester', 'bulk_carrier', 'PA', 40000, 2021, 'in_service')
+      insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status)
+      values ('${testShipId}', '9777666', 'MV Limits Tester', 'BC', 'BC', 'PA', 40000, 2021, 'in_service')
       on conflict (id) do nothing;
 
       insert into fleet.ship_party (ship_id, org_id, party_role, valid)

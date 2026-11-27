@@ -32,10 +32,10 @@ export default createController(routes.ships, {
       let q = (url.searchParams.get('q') ?? '').trim().slice(0, 100)
       let rawStatus = url.searchParams.get('status') ?? 'all'
       let status = ALLOWED_STATUS_FILTERS.has(rawStatus) ? rawStatus : 'all'
-      let rawType = (url.searchParams.get('ship_type') ?? 'all').trim()
-      let shipType = /^[a-z0-9_]{1,50}$/i.test(rawType) ? rawType : 'all'
+      let rawType = (url.searchParams.get('type_iacs') ?? 'all').trim()
+      let typeIacs = /^[a-z0-9_]{1,20}$/i.test(rawType) ? rawType : 'all'
 
-      let filters = { q, status, shipType }
+      let filters = { q, status, typeIacs }
       let { ships, availableTypes } = await loadShipsList(client, filters)
 
       if (wantsJsonPayload(context.request)) {

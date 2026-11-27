@@ -12,9 +12,9 @@ insert into party.organization (id, name, org_type, status) values
   ('c0000000-0000-0000-0000-000000000002', 'Bravo Tankers Corp', 'company', 'active');
 
 -- 2. Setup Test Fleet
-insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status) values
-  ('c0000000-0000-0000-0000-000000000010', '9123456', 'MV Acme Pioneer', 'bulk_carrier', 'PA', 35000, 2018, 'in_service'),
-  ('c0000000-0000-0000-0000-000000000020', '9654321', 'MV Bravo Voyager', 'oil_tanker', 'LR', 50000, 2021, 'in_service');
+insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status) values
+  ('c0000000-0000-0000-0000-000000000010', '9123456', 'MV Acme Pioneer', 'BC', 'BC', 'PA', 35000, 2018, 'in_service'),
+  ('c0000000-0000-0000-0000-000000000020', '9654321', 'MV Bravo Voyager', 'OT', 'OT', 'LR', 50000, 2021, 'in_service');
 
 -- Affiliations
 insert into fleet.ship_party (ship_id, org_id, party_role, valid) values

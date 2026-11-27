@@ -80,7 +80,7 @@ export function NewSurveyRequestPage(handle: Handle<NewSurveyProps>) {
                   <option value="">-- Select Vessel --</option>
                   {ships.map((s) => (
                     <option key={s.id} value={s.id} selected={values?.ship_id === s.id}>
-                      {s.name} (IMO {s.imo_number}) &mdash; {s.ship_type}
+                      {s.name} (IMO {s.imo_number}) &mdash; {s.type_iacs_name ?? s.type_iacs}
                     </option>
                   ))}
                 </select>

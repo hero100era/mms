@@ -101,8 +101,8 @@ describe('Card S-03: Uploads short-lived write-only SAS to quarantine -> finaliz
 
     // 2. Seed test ship & affiliation
     await adminPool.query(`
-      insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status) values
-        ('${shipAId}', '9876543', 'MV Acme Pioneer', 'bulk_carrier', 'PA', 35000, 2018, 'in_service')
+      insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status) values
+        ('${shipAId}', '9876543', 'MV Acme Pioneer', 'BC', 'BC', 'PA', 35000, 2018, 'in_service')
       on conflict (id) do nothing;
 
       insert into fleet.ship_party (ship_id, org_id, party_role, valid)

@@ -42,8 +42,8 @@ select api.staff_position_set('b0000000-0000-0000-0000-00000000000b','engineers'
 insert into party.organization (id, name, org_type, status) values
   ('b0000000-0000-0000-0000-0000000000c1', 'COSCO Shipping', 'company', 'active');
 
-insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status) values
-  ('b0000000-0000-0000-0000-000000000051', '9876543', 'COSCO Prosperity', 'bulk_carrier', 'PA', 40000, 2020, 'in_service');
+insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status) values
+  ('b0000000-0000-0000-0000-000000000051', '9876543', 'COSCO Prosperity', 'BC', 'BC', 'PA', 40000, 2020, 'in_service');
 
 insert into fleet.ship_party (ship_id, org_id, party_role, valid) values
   ('b0000000-0000-0000-0000-000000000051', 'b0000000-0000-0000-0000-0000000000c1', 'registered_owner', tstzrange(now() - interval '1 year', null));

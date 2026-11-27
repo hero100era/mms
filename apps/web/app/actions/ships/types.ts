@@ -11,17 +11,22 @@ import type {
   SurveyRequestRow,
 } from '@mms/pgrst-client'
 
+export interface ShipTypeOption {
+  code: string
+  name: string
+}
+
 export type ShipsFilterState = {
   q: string
   status: string
-  shipType: string
+  typeIacs: string
 }
 
 export type ShipsListProps = {
   role: string
   ships: ShipRow[]
   filters: ShipsFilterState
-  availableTypes: string[]
+  availableTypes: ShipTypeOption[]
   error?: string
 }
 

@@ -159,9 +159,10 @@ insert into core.class_status (code, name) values
 on conflict (code) do update set name = excluded.name;
 
 insert into core.ship_status (code, name) values
-  ('E', 'In Service'),
-  ('L', 'Laid Up'),
-  ('P', 'Withdrawn')
+  ('in_service', 'In Service'),
+  ('laid_up', 'Laid Up'),
+  ('under_construction', 'Under Construction'),
+  ('decommissioned', 'Decommissioned')
 on conflict (code) do update set name = excluded.name;
 
 insert into core.certificate_status (code, name) values
@@ -207,10 +208,11 @@ insert into core.survey_audit_status (code, name) values
   ('D', 'Within Due Date'),
   ('O', 'Overdue'),
   ('P', 'Partial'),
-  ('B', 'Before Due Date')
+  ('B', 'Before Due Date'),
+  ('PP', 'Postponed')
 on conflict (code) do update set name = excluded.name;
 
-insert into core.comment_type (code, name) values
+insert into core.finding_type (code, name) values
   ('M', 'Memorandum'),
   ('C', 'Class Condition'),
   ('S', 'Statutory Condition'),
@@ -220,7 +222,7 @@ insert into core.comment_type (code, name) values
   ('R', 'Retroactive Requirement')
 on conflict (code) do update set name = excluded.name;
 
-insert into core.comment_status (code, name) values
+insert into core.finding_status (code, name) values
   ('A', 'Active'),
   ('P', 'Postponed'),
   ('O', 'Overdue')
@@ -265,7 +267,7 @@ insert into core.vessel_type_mms (code, name) values
   ('PR', 'Ro-ro cargo ships')
 on conflict (code) do update set name = excluded.name;
 
-insert into core.certificate_survey_pool (code, description) values
+insert into core.certificate_type (code, description) values
   ('AFS', 'Anti-Fouling System'),
   ('BWM', 'Ballast Water Management'),
   ('CL', 'Classification'),
@@ -307,25 +309,31 @@ insert into core.certificate_survey_pool (code, description) values
   ('PSS', 'Passenger Ships Safety'),
   ('SPS', 'Special Purpose Ships Safety'),
   ('TM', 'Tonnage'),
-  ('B', 'Inspection of the outside of the ship''s bottom (DRY)'),
-  ('W', 'Inspection of the outside of the ship''s bottom (IWS)'),
-  ('T', 'Tailshaft Survey'),
-  ('T1', 'Tailshaft Survey(No.1)'),
-  ('T2', 'Tailshaft Survey(No.2)'),
-  ('T3', 'Tailshaft Survey(No.3)'),
-  ('T4', 'Tailshaft Survey(No.4)'),
-  ('T5', 'Tailshaft Survey(No.5)'),
-  ('T6', 'Tailshaft Survey(No.6)'),
-  ('Bo', 'Boiler Survey'),
-  ('Bo1', 'Boiler Survey(No.1)'),
-  ('Bo2', 'Boiler Survey(No.2)'),
-  ('Bo3', 'Boiler Survey(No.3)'),
-  ('Bo4', 'Boiler Survey(No.4)'),
-  ('Bo5', 'Boiler Survey(No.5)'),
-  ('Bo6', 'Boiler Survey(No.6)'),
-  ('BOT', 'Bottom survey'),
   ('REFCS', 'Refrigerated Cargo System')
 on conflict (code) do update set description = excluded.description;
+
+insert into core.survey_audit_catalog (code, name, description, item_kind) values
+  ('B', 'Inspection of the outside of the ship''s bottom (DRY)', 'Inspection of the outside of the ship''s bottom (DRY)', 'survey'),
+  ('W', 'Inspection of the outside of the ship''s bottom (IWS)', 'Inspection of the outside of the ship''s bottom (IWS)', 'survey'),
+  ('T', 'Tailshaft Survey', 'Tailshaft Survey', 'survey'),
+  ('T1', 'Tailshaft Survey(No.1)', 'Tailshaft Survey(No.1)', 'survey'),
+  ('T2', 'Tailshaft Survey(No.2)', 'Tailshaft Survey(No.2)', 'survey'),
+  ('T3', 'Tailshaft Survey(No.3)', 'Tailshaft Survey(No.3)', 'survey'),
+  ('T4', 'Tailshaft Survey(No.4)', 'Tailshaft Survey(No.4)', 'survey'),
+  ('T5', 'Tailshaft Survey(No.5)', 'Tailshaft Survey(No.5)', 'survey'),
+  ('T6', 'Tailshaft Survey(No.6)', 'Tailshaft Survey(No.6)', 'survey'),
+  ('Bo', 'Boiler Survey', 'Boiler Survey', 'survey'),
+  ('Bo1', 'Boiler Survey(No.1)', 'Boiler Survey(No.1)', 'survey'),
+  ('Bo2', 'Boiler Survey(No.2)', 'Boiler Survey(No.2)', 'survey'),
+  ('Bo3', 'Boiler Survey(No.3)', 'Boiler Survey(No.3)', 'survey'),
+  ('Bo4', 'Boiler Survey(No.4)', 'Boiler Survey(No.4)', 'survey'),
+  ('Bo5', 'Boiler Survey(No.5)', 'Boiler Survey(No.5)', 'survey'),
+  ('Bo6', 'Boiler Survey(No.6)', 'Boiler Survey(No.6)', 'survey'),
+  ('BOT', 'Bottom survey', 'Bottom survey', 'survey')
+on conflict (code) do update set
+  name = excluded.name,
+  description = excluded.description,
+  item_kind = excluded.item_kind;
 
 insert into core.survey_audit_type (code, name, is_scheduled) values
   ('A', 'Annual', true),

@@ -34,8 +34,8 @@ describe('R2.2 concurrent first revision', () => {
       [ORG],
     )
     await pool.query(
-      `insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status)
-       values ($1, '9123777', 'MV Concurrency', 'bulk_carrier', 'PA', 30000, 2020, 'in_service')
+      `insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status)
+       values ($1, '9123777', 'MV Concurrency', 'BC', 'BC', 'PA', 30000, 2020, 'in_service')
        on conflict (id) do nothing`,
       [SHIP],
     )

@@ -109,8 +109,8 @@ select is(
 insert into party.organization (id, name, org_type, status)
 values ('f1111111-0000-0000-0000-000000000001', 'Rectification Shipping', 'company', 'active');
 
-insert into fleet.ship (id, imo_number, name, ship_type, flag_code, gross_tonnage, build_year, status)
-values ('f1111111-0000-0000-0000-000000000010', '9123999', 'MV Rectification', 'bulk_carrier', 'PA', 30000, 2019, 'in_service');
+insert into fleet.ship (id, imo_number, name, type_iacs, type_mms, flag_code, gross_tonnage, build_year, status)
+values ('f1111111-0000-0000-0000-000000000010', '9123999', 'MV Rectification', 'BC', 'BC', 'PA', 30000, 2019, 'in_service');
 
 insert into iam.app_user (id, kind, display_name, email, status)
 values ('f1111111-0000-0000-0000-000000000031', 'external', 'Rectification Requester', 'r1r2@example.com', 'active');

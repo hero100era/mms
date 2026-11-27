@@ -97,5 +97,10 @@
   "20261126T125358Z_fleet-ship-breakdown-node-particular": "64f58866bcb2dbc85f7b313c4f264a0371567d31298be398ae3ab82b0871eebd",
   "20261127T035412Z_fleet-register-and-survey-jobs": "1879d7d290844228df77740c5f0f77906d1cca6c0c11031c54e6bec6db734230",
   "20261127T043849Z_align-column-compatibility": "79f4527025d7b6fa39375f1f6ede391c2255c7cc7ea4b33606b67aed4c17ba9a",
-  "20261127T075850Z_fleet-ship-detail-views": "456e533769fab107d1a4674a89d6ade48fe615de9b7abcc2a771cd3a3eecb764"
+  "20261127T075850Z_fleet-ship-detail-views": "456e533769fab107d1a4674a89d6ade48fe615de9b7abcc2a771cd3a3eecb764",
+  "20261127T100718Z_refactor-certificate-type-and-survey-audit-catalog": "d0d911e510357c6f1ccebdef12d49ac2be2239a9bc2b1ed80dfcb69011835c54",
+  "20261127T103752Z_refactor-core-flag-prep-notation": "0fcd3c95fde2f3409b6b5fdaeb35b5de8c8af73d7ede16cc1cb8326412c14e04",
+  "20261127T103940Z_refactor-survey-status-and-catalog-links": "7f6fe089861db210318e1eca12eeb9d5473d2ea644a3a107c4a261068e182cc8",
+  "20261127T104258Z_refactor-fleet-ship-consolidation": "a5fbbeb64a9ad0413821e4b57ce1c3d307a837310d8a9c5db858f846b1ab5fe3",
+  "20261127T104555Z_refactor-fleet-register-and-qual": "1087d33db5a0629bd0909b73702a54c9f8693b9fb3ca5b9cc8d190934856c9e9"
 }
