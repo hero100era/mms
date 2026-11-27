@@ -152,6 +152,25 @@ create index ship_breakdown_node_breakdown_ix on fleet.ship_breakdown_node (ship
 create index ship_breakdown_node_parent_ix on fleet.ship_breakdown_node (parent_node_id);
 create index ship_breakdown_node_template_ix on fleet.ship_breakdown_node (template_node_id);
 
+create table fleet.ship_breakdown_node_particular (
+  id integer generated always as identity primary key,
+  ship_breakdown_node_id integer not null references fleet.ship_breakdown_node (id) on delete cascade,
+  template_particular_id integer references core.breakdown_template_node_particular (id) on delete set null,
+  attr_key varchar(100) not null,
+  attr_title varchar(200) not null,
+  attr_value text,
+  selection_options jsonb,
+  data_type core.data_type_enum default 'text',
+  unit varchar(20),
+  is_modified boolean not null default false,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default current_timestamp,
+  updated_at timestamptz not null default current_timestamp,
+  constraint uq_snode_attr unique (ship_breakdown_node_id, attr_key)
+);
+create index ship_breakdown_node_part_node_ix on fleet.ship_breakdown_node_particular (ship_breakdown_node_id);
+create index ship_breakdown_node_part_tmpl_ix on fleet.ship_breakdown_node_particular (template_particular_id);
+
 create trigger ship_stamp
   before insert or update on fleet.ship
   for each row execute function private.stamp();
@@ -176,10 +195,15 @@ create trigger ship_breakdown_node_audit_capture
   after insert or update or delete on fleet.ship_breakdown_node
   for each row execute function private.audit_capture();
 
+create trigger ship_breakdown_node_particular_audit_capture
+  after insert or update or delete on fleet.ship_breakdown_node_particular
+  for each row execute function private.audit_capture();
+
 alter table fleet.ship enable row level security;
 alter table fleet.ship_party enable row level security;
 alter table fleet.ship_breakdown enable row level security;
 alter table fleet.ship_breakdown_node enable row level security;
+alter table fleet.ship_breakdown_node_particular enable row level security;
 
 create policy ship_staff_read on fleet.ship
   for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
@@ -236,6 +260,23 @@ create policy ship_breakdown_node_ext_read on fleet.ship_breakdown_node
       and sp.valid @> now()
   ));
 
+create policy ship_breakdown_node_particular_staff_read on fleet.ship_breakdown_node_particular
+  for select to int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+                int_compliance, int_hr, int_finance, int_sysadmin
+  using (true);
+
+create policy ship_breakdown_node_particular_ext_read on fleet.ship_breakdown_node_particular
+  for select to ext_user
+  using (exists (
+    select 1
+    from fleet.ship_breakdown_node sbn
+    join fleet.ship_breakdown sb on sb.id = sbn.ship_breakdown_id
+    join fleet.ship_party sp on sp.ship_id = sb.ship_id
+    where sbn.id = fleet.ship_breakdown_node_particular.ship_breakdown_node_id
+      and sp.org_id = any (private.my_org_ids())
+      and sp.valid @> now()
+  ));
+
 grant select on fleet.ship to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
@@ -249,5 +290,9 @@ grant select on fleet.ship_breakdown to
   int_compliance, int_hr, int_finance, int_sysadmin;
 
 grant select on fleet.ship_breakdown_node to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on fleet.ship_breakdown_node_particular to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;

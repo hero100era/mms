@@ -13,7 +13,8 @@ insert into audit_trail.excluded_column (schema_name, table_name, column_name, m
   ('audit_trail', 'crypto_shred_key', 'key_fingerprint', 'omit', 'crypto shred key fingerprint'),
   ('audit_trail', 'crypto_shred_key', 'key_status', 'omit', 'crypto shred key lifecycle status'),
   ('core', 'breakdown_template_node_particular', 'attr_key', 'omit', 'attribute specification key'),
-  ('core', 'checklist_item_particular', 'attr_key', 'omit', 'attribute specification key')
+  ('core', 'checklist_item_particular', 'attr_key', 'omit', 'attribute specification key'),
+  ('fleet', 'ship_breakdown_node_particular', 'attr_key', 'omit', 'attribute specification key')
 on conflict (schema_name, table_name, column_name) do update
   set mode = excluded.mode, reason = excluded.reason;
 
