@@ -2,7 +2,7 @@
 
 create sequence fleet.class_number_seq
   as integer
-  start with 1000
+  start with 10000
   increment by 1;
 
 -- Sequence usage is owned by mms_owner / SECURITY DEFINER functions; do not expose to capability roles.
