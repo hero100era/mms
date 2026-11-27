@@ -36,9 +36,216 @@ export interface ShipRow {
   name: string
   ship_type: string
   flag_code: string
-  gross_tonnage: number
-  build_year: number
+  gross_tonnage: number | null
+  build_year: number | null
   status: string
+  responsible_mts_unit_id?: string | null
+  created_at?: string
+  updated_at?: string
+  class_number?: number
+  previous_names?: string | null
+  build_date?: string | null
+  commissioning_date?: string | null
+  keel_laid_date?: string | null
+  contract_date?: string | null
+  class_entry_date?: string | null
+  administration_types?: string
+  classed_by?: string | null
+  port_of_registry?: string | null
+  date_of_registry?: string | null
+  registry_number?: string | null
+  call_sign?: string | null
+  official_number?: string | null
+  signal_letter?: string | null
+  mmsi_number?: string | null
+  type_iacs?: string
+  type_other?: string | null
+  type_mms?: string | null
+  class_status?: string | null
+  ship_status?: string | null
+  main_class?: string | null
+  dual_class?: string | null
+  gross_tons?: number | null
+  net_tons?: number | null
+  national_tons?: number | null
+  deadweight?: number | null
+  light_ship?: number | null
+  ballast_capacity?: number | null
+  equipment_number?: number | null
+  length?: number | null
+  length_oa?: number | null
+  length_bp?: number | null
+  moulded_depth?: number | null
+  moulded_breadth?: number | null
+  moulded_draft?: number | null
+  design_draft?: number | null
+  breakdown_template_id?: number | null
+  is_active?: boolean
+  responsible_mts_unit_name?: string | null
+  flag_name?: string | null
+  type_iacs_name?: string | null
+  class_status_name?: string | null
+  ship_status_name?: string | null
+}
+
+export interface ShipPartyRow {
+  id: string
+  ship_id: string
+  org_id: string
+  org_name: string
+  org_type: string
+  party_role: string
+  valid: string
+  is_current: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipClassNotationRow {
+  id: string
+  ship_id: string
+  notation_id: number
+  notation_code: string
+  notation_symbol: string | null
+  notation_name: string
+  society_code: string
+  group_id: number
+  group_code: string
+  group_name: string
+  status: string
+  display_order: number
+  assigned_date: string
+  effective_date: string | null
+  expiry_date: string | null
+  resolved_notation: string | null
+  last_survey_date: string | null
+  next_survey_due: string | null
+  survey_cycle_months: number | null
+  remarks: string | null
+  is_current: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipCertificateRow {
+  id: string
+  certificate_no: number
+  version: number
+  ship_id: string | null
+  company_id: string | null
+  certificate_template_code: string | null
+  status: string
+  status_name: string | null
+  remark: string
+  issued_by: string
+  cert_code: string
+  validity_type: string
+  category: string
+  internal_category: string
+  description: string | null
+  issue_date: string
+  expiry_date: string | null
+  extended_date: string | null
+  doc_administration: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipSurveyAuditRow {
+  id: string
+  ship_id: string | null
+  company_id: string | null
+  cert_code: string | null
+  certificate_id: string | null
+  pool_id: number | null
+  description: string
+  last_held_date: string
+  place_held: string
+  next_due_date: string | null
+  postponement_date: string | null
+  survey_status: string | null
+  range_from_date: string | null
+  range_to_date: string | null
+  fee: number | null
+  is_ordered: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipFindingCommentRow {
+  id: string
+  ship_id: string | null
+  company_id: string | null
+  comment_type: string
+  comment_type_name: string | null
+  is_private: boolean
+  date_issued: string
+  place_issued: string | null
+  due_date: string | null
+  status: string
+  status_name: string | null
+  postponed_due_date: string | null
+  mms_reference: string | null
+  subject: string
+  body: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipBreakdownRow {
+  id: number
+  ship_id: string
+  template_id: number | null
+  name: string
+  description: string | null
+  revision: number
+  is_active: boolean
+  applied_at: string | null
+  applied_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipBreakdownNodeRow {
+  id: number
+  ship_breakdown_id: number
+  ship_id: string
+  parent_node_id: number | null
+  template_node_id: number | null
+  code: string
+  name: string
+  description: string | null
+  category: string | null
+  node_type: string | null
+  level: number
+  sort_order: number
+  is_from_template: boolean
+  is_modified: boolean
+  is_active: boolean
+  metadata: Record<string, unknown> | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ShipBreakdownNodeParticularRow {
+  id: number
+  ship_breakdown_node_id: number
+  ship_breakdown_id: number
+  ship_id: string
+  template_particular_id: number | null
+  attr_key: string
+  attr_title: string
+  attr_value: string | null
+  selection_options: unknown
+  data_type: string
+  unit: string | null
+  is_modified: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
 }
 
 export interface OrgUnitRow {
@@ -256,6 +463,14 @@ export interface QualificationRow {
 export interface ApiViews {
   survey_requests: SurveyRequestRow
   ships: ShipRow
+  ship_parties: ShipPartyRow
+  ship_class_notations: ShipClassNotationRow
+  ship_certificates: ShipCertificateRow
+  ship_survey_audits: ShipSurveyAuditRow
+  ship_finding_comments: ShipFindingCommentRow
+  ship_breakdowns: ShipBreakdownRow
+  ship_breakdown_nodes: ShipBreakdownNodeRow
+  ship_breakdown_node_particulars: ShipBreakdownNodeParticularRow
   org_units: OrgUnitRow
   organizations: OrganizationRow
   documents: DocumentRow

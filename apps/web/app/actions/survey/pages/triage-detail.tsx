@@ -129,7 +129,11 @@ export function TriageDetailPage(handle: Handle<TriageDetailProps>) {
                 <StatusBadge status={request.status} />
               </div>
               <p mix={headerSubtitleStyle}>
-                Vessel: <strong>{request.ship_name}</strong> (IMO: {request.ship_imo_number}) | Requesting Organization: <strong>{request.org_name}</strong>
+                Vessel:{' '}
+                <strong>
+                  <a href={routes.ships.detail.href({ id: request.ship_id })}>{request.ship_name}</a>
+                </strong>{' '}
+                (IMO: {request.ship_imo_number}) | Requesting Organization: <strong>{request.org_name}</strong>
               </p>
             </div>
             <div>

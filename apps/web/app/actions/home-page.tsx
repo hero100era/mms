@@ -48,11 +48,13 @@ const ROLE_LABELS: Record<string, string> = {
 // authorization decision — every target page is enforced server-side.
 const ROLE_NAV: Record<string, NavItem[]> = {
   ext_user: [
+    { href: routes.ships.index.href(), label: 'Fleet vessels', description: 'Vessels and particulars in your scope' },
     { href: routes.survey.index.href(), label: 'My survey requests', description: 'Track and submit survey requests' },
     { href: routes.survey.new.href(), label: 'New survey request', description: 'Raise a new request for a vessel' },
     { href: routes.session.profile.href(), label: 'Profile', description: 'Sign-in methods and sessions' },
   ],
   int_viewer: [
+    { href: routes.ships.index.href(), label: 'Fleet vessels', description: 'Read-only vessel register and particulars' },
     { href: routes.survey.index.href(), label: 'Survey requests', description: 'Read-only view of requests' },
     { href: routes.triage.queue.href(), label: 'Triage queue', description: 'Station triage worklist' },
     { href: routes.session.profile.href(), label: 'Profile', description: 'Sign-in methods and sessions' },
@@ -68,6 +70,7 @@ const ROLE_NAV: Record<string, NavItem[]> = {
 }
 
 const DEFAULT_STAFF_NAV: NavItem[] = [
+  { href: routes.ships.index.href(), label: 'Fleet vessels', description: 'Vessel register and particulars' },
   { href: routes.survey.index.href(), label: 'Survey requests', description: 'Requests in your scope' },
   { href: routes.triage.queue.href(), label: 'Triage queue', description: 'Station triage worklist' },
   { href: routes.session.profile.href(), label: 'Profile', description: 'Sign-in methods and sessions' },

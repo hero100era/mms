@@ -13,8 +13,249 @@ select
   s.status,
   s.responsible_mts_unit_id,
   s.created_at,
-  s.updated_at
-from fleet.ship s;
+  s.updated_at,
+  s.class_number,
+  s.previous_names,
+  s.build_date,
+  s.commissioning_date,
+  s.keel_laid_date,
+  s.contract_date,
+  s.class_entry_date,
+  s.administration_types,
+  s.classed_by,
+  s.port_of_registry,
+  s.date_of_registry,
+  s.registry_number,
+  s.call_sign,
+  s.official_number,
+  s.signal_letter,
+  s.mmsi_number,
+  s.type_iacs,
+  s.type_other,
+  s.type_mms,
+  s.class_status,
+  s.ship_status,
+  s.main_class,
+  s.dual_class,
+  s.gross_tons,
+  s.net_tons,
+  s.national_tons,
+  s.deadweight,
+  s.light_ship,
+  s.ballast_capacity,
+  s.equipment_number,
+  s.length,
+  s.length_oa,
+  s.length_bp,
+  s.moulded_depth,
+  s.moulded_breadth,
+  s.moulded_draft,
+  s.design_draft,
+  s.breakdown_template_id,
+  s.is_active,
+  private.org_unit_name(s.responsible_mts_unit_id) as responsible_mts_unit_name,
+  f.fullname as flag_name,
+  vt.name as type_iacs_name,
+  cs.name as class_status_name,
+  ss.name as ship_status_name
+from fleet.ship s
+left join core.flag f on f.code = s.flag_code
+left join core.vessel_type_iacs vt on vt.code = s.type_iacs
+left join core.class_status cs on cs.code = s.class_status
+left join core.ship_status ss on ss.code = s.ship_status;
+
+create view api.ship_parties
+with (security_invoker = true)
+as
+select
+  sp.id,
+  sp.ship_id,
+  sp.org_id,
+  o.name as org_name,
+  o.org_type,
+  sp.party_role,
+  sp.valid,
+  (sp.valid @> now()) as is_current,
+  sp.created_at,
+  sp.updated_at
+from fleet.ship_party sp
+join party.organization o on o.id = sp.org_id;
+
+create view api.ship_class_notations
+with (security_invoker = true)
+as
+select
+  scn.id,
+  scn.ship_id,
+  scn.notation_id,
+  cn.notation_code,
+  cn.notation_symbol,
+  cn.notation_name,
+  scn.society_code,
+  scn.group_id,
+  ng.group_code,
+  ng.group_name,
+  scn.status,
+  scn.display_order,
+  scn.assigned_date,
+  scn.effective_date,
+  scn.expiry_date,
+  scn.resolved_notation,
+  scn.last_survey_date,
+  scn.next_survey_due,
+  scn.survey_cycle_months,
+  scn.remarks,
+  scn.is_current,
+  scn.created_at,
+  scn.updated_at
+from fleet.ship_class_notation scn
+join core.class_notation cn on cn.id = scn.notation_id
+join core.notation_group ng on ng.id = scn.group_id;
+
+create view api.ship_certificates
+with (security_invoker = true)
+as
+select
+  c.id,
+  c.certificate_no,
+  c.version,
+  c.ship_id,
+  c.company_id,
+  c.certificate_template_code,
+  c.status,
+  cs.name as status_name,
+  c.remark,
+  c.issued_by,
+  c.cert_code,
+  c.validity_type,
+  c.category,
+  c.internal_category,
+  c.description,
+  c.issue_date,
+  c.expiry_date,
+  c.extended_date,
+  c.doc_administration,
+  c.is_active,
+  c.created_at,
+  c.updated_at
+from fleet.certificate c
+left join core.certificate_status cs on cs.code = c.status;
+
+create view api.ship_survey_audits
+with (security_invoker = true)
+as
+select
+  sa.id,
+  sa.ship_id,
+  sa.company_id,
+  sa.cert_code,
+  sa.certificate_id,
+  sa.pool_id,
+  sa.description,
+  sa.last_held_date,
+  sa.place_held,
+  sa.next_due_date,
+  sa.postponement_date,
+  sa.survey_status,
+  sa.range_from_date,
+  sa.range_to_date,
+  sa.fee,
+  sa.is_ordered,
+  sa.is_active,
+  sa.created_at,
+  sa.updated_at
+from fleet.survey_audit sa;
+
+create view api.ship_finding_comments
+with (security_invoker = true)
+as
+select
+  fc.id,
+  fc.ship_id,
+  fc.company_id,
+  fc.comment_type,
+  ct.name as comment_type_name,
+  fc.is_private,
+  fc.date_issued,
+  fc.place_issued,
+  fc.due_date,
+  fc.status,
+  cs.name as status_name,
+  fc.postponed_due_date,
+  fc.mms_reference,
+  fc.subject,
+  fc.body,
+  fc.is_active,
+  fc.created_at,
+  fc.updated_at
+from fleet.finding_comment fc
+left join core.comment_type ct on ct.code = fc.comment_type
+left join core.comment_status cs on cs.code = fc.status;
+
+create view api.ship_breakdowns
+with (security_invoker = true)
+as
+select
+  sb.id,
+  sb.ship_id,
+  sb.template_id,
+  sb.name,
+  sb.description,
+  sb.revision,
+  sb.is_active,
+  sb.applied_at,
+  sb.applied_by,
+  sb.created_at,
+  sb.updated_at
+from fleet.ship_breakdown sb;
+
+create view api.ship_breakdown_nodes
+with (security_invoker = true)
+as
+select
+  sbn.id,
+  sbn.ship_breakdown_id,
+  sb.ship_id,
+  sbn.parent_node_id,
+  sbn.template_node_id,
+  sbn.code,
+  sbn.name,
+  sbn.description,
+  sbn.category,
+  sbn.node_type,
+  sbn.level,
+  sbn.sort_order,
+  sbn.is_from_template,
+  sbn.is_modified,
+  sbn.is_active,
+  sbn.metadata,
+  sbn.created_at,
+  sbn.updated_at
+from fleet.ship_breakdown_node sbn
+join fleet.ship_breakdown sb on sb.id = sbn.ship_breakdown_id;
+
+create view api.ship_breakdown_node_particulars
+with (security_invoker = true)
+as
+select
+  sbnp.id,
+  sbnp.ship_breakdown_node_id,
+  sbn.ship_breakdown_id,
+  sb.ship_id,
+  sbnp.template_particular_id,
+  sbnp.attr_key,
+  sbnp.attr_title,
+  sbnp.attr_value,
+  sbnp.selection_options,
+  sbnp.data_type,
+  sbnp.unit,
+  sbnp.is_modified,
+  sbnp.sort_order,
+  sbnp.created_at,
+  sbnp.updated_at
+from fleet.ship_breakdown_node_particular sbnp
+join fleet.ship_breakdown_node sbn on sbn.id = sbnp.ship_breakdown_node_id
+join fleet.ship_breakdown sb on sb.id = sbn.ship_breakdown_id;
 
 create view api.survey_requests
 with (security_invoker = true)
@@ -82,6 +323,38 @@ select
 from core.document_version v;
 
 grant select on api.ships to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_parties to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_class_notations to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_certificates to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_survey_audits to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_finding_comments to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_breakdowns to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_breakdown_nodes to
+  ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
+  int_compliance, int_hr, int_finance, int_sysadmin;
+
+grant select on api.ship_breakdown_node_particulars to
   ext_user, int_viewer, int_surveyor, int_auditor, int_coordinator, int_manager,
   int_compliance, int_hr, int_finance, int_sysadmin;
 

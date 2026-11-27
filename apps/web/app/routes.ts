@@ -122,6 +122,12 @@ export const routes = route({
     documentDownload: get('/documents/:documentId/versions/:versionId/download'),
   },
 
+  // Fleet / vessel register and particulars.
+  ships: {
+    index: get('/ships'),
+    detail: get('/ships/:id'),
+  },
+
   // SLICE-01: the external survey request and the station triage queue.
   survey: {
     index: get('/surveys'),

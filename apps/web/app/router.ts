@@ -19,6 +19,7 @@ import adminExternalUsersController from './actions/admin/external-users/control
 import uploadsController from './actions/uploads/controller.tsx'
 import surveyController from './actions/survey/controller.tsx'
 import triageController from './actions/triage/controller.tsx'
+import shipsController from './actions/ships/controller.tsx'
 import { assets } from './assets.ts'
 import { assertDevAuthAllowed } from './auth/dev-stub.ts'
 import { sessionCookie, sessionStorage } from './auth/session-cookie.ts'
@@ -114,3 +115,4 @@ router.map(routes.admin.externalUsers, adminExternalUsersController)
 router.map(routes.uploads, uploadsController)
 router.map(routes.survey, surveyController)
 router.map(routes.triage, triageController)
+router.map(routes.ships, shipsController)

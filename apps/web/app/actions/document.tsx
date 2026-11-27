@@ -11,7 +11,14 @@ export interface DocumentProps {
 }
 
 const DEFAULT_TITLE = readAppDisplayName('Mms')
-const bodyStyle = css({ margin: 0 })
+const htmlStyle = css({
+  colorScheme: 'light dark',
+  backgroundColor: '#f3f6fa',
+  '@media (prefers-color-scheme: dark)': {
+    backgroundColor: '#11161d',
+  },
+})
+const bodyStyle = css({ margin: 0, minHeight: '100vh' })
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
@@ -19,7 +26,7 @@ export function Document(handle: Handle<DocumentProps>) {
     let { href, importMap, preloads } = scriptEntry
 
     return (
-      <html lang="en">
+      <html lang="en" mix={htmlStyle}>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
